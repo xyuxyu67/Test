@@ -6,19 +6,23 @@ Library.MaxWindows = 5
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 
 -- ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CustomUILibrary"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = PlayerGui
 
 -- Constants
-local WINDOW_WIDTH = 260
-local WINDOW_HEIGHT = 300
+local WINDOW_WIDTH = 400
+local WINDOW_HEIGHT = 150
+local MIN_HEIGHT = 32
 local WINDOW_SPACING = 10
 local TOP_OFFSET = 20
+local TWEEN_TIME = 0.12
 
 -- Update window positions
 local function UpdateWindowPositions()
@@ -26,6 +30,38 @@ local function UpdateWindowPositions()
 		local x = (i - 1) * (WINDOW_WIDTH + WINDOW_SPACING) + WINDOW_SPACING
 		window.Main.Position = UDim2.new(0, x, 0, TOP_OFFSET)
 	end
+end
+
+-- Drag system
+local function MakeDraggable(frame, dragArea)
+	local dragging = false
+	local dragStart, startPos
+
+	dragArea.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+		end
+	end)
+
+	dragArea.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = input.Position - dragStart
+			frame.Position = UDim2.new(
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
 end
 
 -- Create Window
@@ -36,7 +72,6 @@ function Library:CreateWindow(config)
 	end
 
 	config = config or {}
-
 	local Name = config.Name or "Window"
 	local Color = config.Color or Color3.fromRGB(35, 35, 35)
 	local Font = config.Font or Enum.Font.Gotham
@@ -46,22 +81,16 @@ function Library:CreateWindow(config)
 	Main.Size = UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT)
 	Main.BackgroundColor3 = Color
 	Main.BorderSizePixel = 0
+	Main.ZIndex = 10
 	Main.Parent = ScreenGui
-
-	local Corner = Instance.new("UICorner")
-	Corner.CornerRadius = UDim.new(0, 8)
-	Corner.Parent = Main
 
 	-- TopBar
 	local TopBar = Instance.new("Frame")
-	TopBar.Size = UDim2.fromOffset(WINDOW_WIDTH, 32)
+	TopBar.Size = UDim2.fromOffset(WINDOW_WIDTH, MIN_HEIGHT)
 	TopBar.BackgroundColor3 = Color
 	TopBar.BorderSizePixel = 0
+	TopBar.ZIndex = 11
 	TopBar.Parent = Main
-
-	local TopCorner = Instance.new("UICorner")
-	TopCorner.CornerRadius = UDim.new(0, 8)
-	TopCorner.Parent = TopBar
 
 	-- Title
 	local Title = Instance.new("TextLabel")
@@ -74,6 +103,7 @@ function Library:CreateWindow(config)
 	Title.TextScaled = true
 	Title.TextXAlignment = Enum.TextXAlignment.Left
 	Title.TextYAlignment = Enum.TextYAlignment.Center
+	Title.ZIndex = 12
 	Title.Parent = TopBar
 
 	-- Minimize Button
@@ -85,6 +115,7 @@ function Library:CreateWindow(config)
 	Minimize.TextColor3 = Color3.new(1, 1, 1)
 	Minimize.Font = Font
 	Minimize.TextScaled = true
+	Minimize.ZIndex = 12
 	Minimize.Parent = TopBar
 
 	-- Window Object
@@ -95,16 +126,13 @@ function Library:CreateWindow(config)
 	function Window:Toggle()
 		Window.Minimized = not Window.Minimized
 
-		local targetSize
-		if Window.Minimized then
-			targetSize = UDim2.fromOffset(WINDOW_WIDTH, 32)
-		else
-			targetSize = UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT)
-		end
+		local targetSize = Window.Minimized
+			and UDim2.fromOffset(WINDOW_WIDTH, MIN_HEIGHT)
+			or UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT)
 
 		TweenService:Create(
 			Main,
-			TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			TweenInfo.new(TWEEN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 			{ Size = targetSize }
 		):Play()
 	end
@@ -112,6 +140,9 @@ function Library:CreateWindow(config)
 	Minimize.MouseButton1Click:Connect(function()
 		Window:Toggle()
 	end)
+
+	-- Dragging
+	MakeDraggable(Main, TopBar)
 
 	table.insert(Library.Windows, Window)
 	UpdateWindowPositions()
