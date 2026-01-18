@@ -17,12 +17,12 @@ ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = PlayerGui
 
 -- Constants
-local WINDOW_WIDTH = 400
+local WINDOW_WIDTH = 133      -- В 3 раза меньше
 local WINDOW_HEIGHT = 150
 local MIN_HEIGHT = 32
 local WINDOW_SPACING = 10
 local TOP_OFFSET = 20
-local TWEEN_TIME = 0.12
+local TWEEN_TIME = 0.06       -- ещё быстрее
 
 -- Update window positions
 local function UpdateWindowPositions()
@@ -35,7 +35,8 @@ end
 -- Drag system
 local function MakeDraggable(frame, dragArea)
 	local dragging = false
-	local dragStart, startPos
+	local dragStart
+	local startPos
 
 	dragArea.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -95,7 +96,7 @@ function Library:CreateWindow(config)
 	-- Title
 	local Title = Instance.new("TextLabel")
 	Title.Size = UDim2.new(1, -40, 1, 0)
-	Title.Position = UDim2.fromOffset(10, 0)
+	Title.Position = UDim2.fromOffset(6, 0)
 	Title.BackgroundTransparency = 1
 	Title.Text = Name
 	Title.TextColor3 = Color3.new(1, 1, 1)
@@ -108,8 +109,8 @@ function Library:CreateWindow(config)
 
 	-- Minimize Button
 	local Minimize = Instance.new("TextButton")
-	Minimize.Size = UDim2.fromOffset(30, 24)
-	Minimize.Position = UDim2.new(1, -35, 0.5, -12)
+	Minimize.Size = UDim2.fromOffset(24, 24)
+	Minimize.Position = UDim2.new(1, -26, 0.5, -12)
 	Minimize.BackgroundTransparency = 1
 	Minimize.Text = "–"
 	Minimize.TextColor3 = Color3.new(1, 1, 1)
@@ -141,7 +142,7 @@ function Library:CreateWindow(config)
 		Window:Toggle()
 	end)
 
-	-- Dragging
+	-- ENABLE DRAGGING
 	MakeDraggable(Main, TopBar)
 
 	table.insert(Library.Windows, Window)
