@@ -1,17 +1,15 @@
 -- Roblox Dark GUI Library
--- Структура как в Orion Library
+-- Минимальная версия с рабочим драггингом
 
 local OrionLib = {}
 
 -- Настройки
 OrionLib.WindowCount = 0
 OrionLib.MaxWindows = 5
-OrionLib.Windows = {}
 
 -- Сервисы
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 
 -- Утилиты
@@ -23,10 +21,8 @@ function OrionLib:Create(className, properties)
     return instance
 end
 
--- Создание основного окна (как в Orion)
+-- Создание окна
 function OrionLib:MakeWindow(options)
-    options = options or {}
-    
     if OrionLib.WindowCount >= OrionLib.MaxWindows then
         warn("Максимальное количество окон достигнуто (" .. OrionLib.MaxWindows .. ")")
         return nil
@@ -35,81 +31,59 @@ function OrionLib:MakeWindow(options)
     OrionLib.WindowCount += 1
     local Window = {}
     
-    -- Создание ScreenGui с высоким ZIndex
+    -- Создание ScreenGui
     local ScreenGui = OrionLib:Create("ScreenGui", {
-        Name = options.Name or "OrionWindow",
+        Name = "DarkGUI",
         ResetOnSpawn = false,
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-        DisplayOrder = 999 -- Очень высокий приоритет
+        DisplayOrder = 999
     })
     
     -- Главный контейнер окна
     local MainFrame = OrionLib:Create("Frame", {
-        Name = "Main",
+        Name = "MainFrame",
         Size = UDim2.new(0, 125, 0, 25),
         Position = UDim2.new(0, 15 + ((OrionLib.WindowCount - 1) * 140), 0, 15),
-        BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
         BorderSizePixel = 0,
         ClipsDescendants = true,
         Parent = ScreenGui
     })
     
-    -- Обводка окна
-    local Outline = OrionLib:Create("UIStroke", {
-        Color = Color3.fromRGB(50, 50, 50),
-        Thickness = 1,
+    -- Заголовок окна (сделаем его отдельным фреймом для драггинга)
+    local TitleBar = OrionLib:Create("Frame", {
+        Name = "TitleBar",
+        Size = UDim2.new(1, 0, 0, 25),
+        BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+        BorderSizePixel = 0,
         Parent = MainFrame
     })
     
-    -- Эффект тени
-    local Shadow = OrionLib:Create("ImageLabel", {
-        Name = "Shadow",
-        Size = UDim2.new(1, 12, 1, 12),
-        Position = UDim2.new(0, -6, 0, -6),
-        BackgroundTransparency = 1,
-        Image = "rbxassetid://1316045217",
-        ImageColor3 = Color3.fromRGB(0, 0, 0),
-        ImageTransparency = 0.88,
-        ScaleType = Enum.ScaleType.Slice,
-        SliceCenter = Rect.new(10, 10, 118, 118),
-        ZIndex = 0,
-        Parent = MainFrame
-    })
-    
-    -- Заголовок окна
-    local Title = OrionLib:Create("TextLabel", {
-        Name = "Title",
-        Size = UDim2.new(1, -30, 0, 25),
-        Position = UDim2.new(0, 8, 0, 0),
+    -- Текст заголовка
+    local TitleText = OrionLib:Create("TextLabel", {
+        Name = "TitleText",
+        Size = UDim2.new(1, -30, 1, 0),
+        Position = UDim2.new(0, 5, 0, 0),
         BackgroundTransparency = 1,
         Text = options.Name or "Window",
         TextColor3 = Color3.fromRGB(220, 220, 220),
         TextXAlignment = Enum.TextXAlignment.Left,
-        Font = Enum.Font.GothamSemibold,
-        TextSize = 14,
-        ZIndex = 2,
-        Parent = MainFrame
+        Font = Enum.Font.Gotham,
+        TextSize = 13,
+        Parent = TitleBar
     })
     
-    -- Кнопка сворачивания
+    -- Кнопка сворачивания (БЕЗ ПОДЛОЖКИ)
     local ToggleButton = OrionLib:Create("TextButton", {
         Name = "ToggleButton",
-        Size = UDim2.new(0, 18, 0, 18),
-        Position = UDim2.new(1, -23, 0, 3),
-        BackgroundColor3 = Color3.fromRGB(45, 45, 45),
-        BorderSizePixel = 0,
+        Size = UDim2.new(0, 20, 0, 20),
+        Position = UDim2.new(1, -25, 0, 2),
+        BackgroundTransparency = 1, -- Прозрачный фон
         Text = "+",
         TextColor3 = Color3.fromRGB(220, 220, 220),
         Font = Enum.Font.GothamBold,
-        TextSize = 14,
-        ZIndex = 2,
-        Parent = MainFrame
-    })
-    
-    -- Скругление кнопки
-    OrionLib:Create("UICorner", {
-        CornerRadius = UDim.new(0, 4),
-        Parent = ToggleButton
+        TextSize = 16,
+        Parent = TitleBar
     })
     
     -- Контейнер для элементов
@@ -117,63 +91,62 @@ function OrionLib:MakeWindow(options)
         Name = "Container",
         Size = UDim2.new(1, 0, 1, -25),
         Position = UDim2.new(0, 0, 0, 25),
-        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-        BackgroundTransparency = 0,
+        BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+        BackgroundTransparency = 1,
         ClipsDescendants = true,
         Parent = MainFrame
     })
     
-    -- Layout для элементов
     local ContainerList = OrionLib:Create("UIListLayout", {
         Parent = Container,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 8)
+        Padding = UDim.new(0, 5)
     })
     
     local ContainerPadding = OrionLib:Create("UIPadding", {
         Parent = Container,
-        PaddingTop = UDim.new(0, 8),
-        PaddingLeft = UDim.new(0, 8),
-        PaddingRight = UDim.new(0, 8),
-        PaddingBottom = UDim.new(0, 8)
+        PaddingTop = UDim.new(0, 5),
+        PaddingLeft = UDim.new(0, 5),
+        PaddingRight = UDim.new(0, 5)
     })
     
-    -- Состояния окна
+    -- Состояния
     Window.Closed = true
     Window.Elements = {}
-    Window.Container = Container
-    Window.MainFrame = MainFrame
     
-    -- Функция переключения окна
+    -- Функция переключения
     function Window:Toggle()
         Window.Closed = not Window.Closed
         
         if Window.Closed then
             ToggleButton.Text = "+"
-            Container.Visible = false
-            TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            TweenService:Create(MainFrame, TweenInfo.new(0.2), {
                 Size = UDim2.new(0, 125, 0, 25)
             }):Play()
+            Container.Visible = false
         else
             ToggleButton.Text = "-"
-            TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Size = UDim2.new(0, 125, 0, 25 + ContainerList.AbsoluteContentSize.Y + 16)
+            -- Вычисляем высоту контейнера
+            local totalHeight = 25
+            for _, element in pairs(Window.Elements) do
+                totalHeight = totalHeight + element.Size.Y.Offset
+            end
+            TweenService:Create(MainFrame, TweenInfo.new(0.2), {
+                Size = UDim2.new(0, 125, 0, totalHeight)
             }):Play()
             Container.Visible = true
         end
     end
     
-    -- Обработчик кнопки сворачивания
+    -- Обработчик кнопки
     ToggleButton.MouseButton1Click:Connect(function()
         Window:Toggle()
     end)
     
-    -- Улучшенная система перетаскивания
-    local dragging = false
-    local dragStart
-    local startPos
+    -- УЛУЧШЕННЫЙ ДРАГГИНГ
+    local dragInput, dragStart, startPos
     
-    local function updateDrag(input)
+    local function updateInput(input)
         local delta = input.Position - dragStart
         MainFrame.Position = UDim2.new(
             startPos.X.Scale, 
@@ -183,348 +156,154 @@ function OrionLib:MakeWindow(options)
         )
     end
     
-    -- Drag по заголовку
-    Title.InputBegan:Connect(function(input)
+    -- Обработка начала перетаскивания
+    TitleBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
             dragStart = input.Position
             startPos = MainFrame.Position
             
-            -- Визуальная обратная связь
-            TweenService:Create(Title, TweenInfo.new(0.1), {
-                TextColor3 = Color3.fromRGB(180, 180, 180)
-            }):Play()
-            
-            input.Changed:Connect(function()
+            -- Подписываемся на изменение состояния мыши
+            local connection
+            connection = input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                    TweenService:Create(Title, TweenInfo.new(0.1), {
-                        TextColor3 = Color3.fromRGB(220, 220, 220)
-                    }):Play()
+                    connection:Disconnect()
                 end
             end)
         end
     end)
     
-    -- Drag по всему заголовку окна
-    MainFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = MainFrame.Position
+    -- Обработка движения мыши
+    TitleBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
         end
     end)
     
-    -- Обработка перемещения мыши
+    -- Основной драггинг
     UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            updateDrag(input)
+        if input == dragInput and dragStart then
+            updateInput(input)
         end
     end)
     
-    -- Методы окна (как в Orion)
-    function Window:MakeTab(options)
-        options = options or {}
-        local Tab = {}
+    -- Методы для добавления элементов
+    function Window:AddButton(name, callback)
+        local ButtonFrame = OrionLib:Create("Frame", {
+            Name = name .. "Button",
+            Size = UDim2.new(1, 0, 0, 25),
+            BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+            BorderSizePixel = 0,
+            Parent = Container
+        })
         
-        -- Создание секции (в простой версии это аналог Tab)
-        function Tab:AddSection(options)
-            local Section = {}
-            
-            local SectionFrame = OrionLib:Create("Frame", {
-                Name = options.Name or "Section",
-                Size = UDim2.new(1, 0, 0, 0),
-                BackgroundTransparency = 1,
-                LayoutOrder = #Window.Elements + 1,
-                Parent = Container
-            })
-            
-            local SectionTitle = OrionLib:Create("TextLabel", {
-                Name = "Title",
-                Size = UDim2.new(1, 0, 0, 20),
-                BackgroundTransparency = 1,
-                Text = "  " .. (options.Name or "Section"),
-                TextColor3 = Color3.fromRGB(160, 160, 160),
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Font = Enum.Font.Gotham,
-                TextSize = 12,
-                Parent = SectionFrame
-            })
-            
-            local SectionContainer = OrionLib:Create("Frame", {
-                Name = "Elements",
-                Size = UDim2.new(1, 0, 0, 0),
-                Position = UDim2.new(0, 0, 0, 25),
-                BackgroundTransparency = 1,
-                Parent = SectionFrame
-            })
-            
-            local SectionList = OrionLib:Create("UIListLayout", {
-                Parent = SectionContainer,
-                SortOrder = Enum.SortOrder.LayoutOrder,
-                Padding = UDim.new(0, 6)
-            })
-            
-            SectionList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-                SectionContainer.Size = UDim2.new(1, 0, 0, SectionList.AbsoluteContentSize.Y)
-                SectionFrame.Size = UDim2.new(1, 0, 0, SectionList.AbsoluteContentSize.Y + 25)
-                
-                if not Window.Closed then
-                    MainFrame.Size = UDim2.new(0, 125, 0, 25 + ContainerList.AbsoluteContentSize.Y + 16)
-                end
-            end)
-            
-            table.insert(Window.Elements, SectionFrame)
-            
-            -- Методы секции
-            function Section:AddButton(options)
-                options = options or {}
-                local Button = {}
-                
-                local ButtonFrame = OrionLib:Create("Frame", {
-                    Name = "Button",
-                    Size = UDim2.new(1, 0, 0, 30),
-                    BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-                    BorderSizePixel = 0,
-                    Parent = SectionContainer
-                })
-                
-                OrionLib:Create("UICorner", {
-                    CornerRadius = UDim.new(0, 6),
-                    Parent = ButtonFrame
-                })
-                
-                local ButtonLabel = OrionLib:Create("TextLabel", {
-                    Name = "Label",
-                    Size = UDim2.new(1, -10, 1, 0),
-                    Position = UDim2.new(0, 5, 0, 0),
-                    BackgroundTransparency = 1,
-                    Text = options.Name or "Button",
-                    TextColor3 = Color3.fromRGB(220, 220, 220),
-                    Font = Enum.Font.Gotham,
-                    TextSize = 13,
-                    Parent = ButtonFrame
-                })
-                
-                local ButtonBtn = OrionLib:Create("TextButton", {
-                    Name = "Button",
-                    Size = UDim2.new(1, 0, 1, 0),
-                    BackgroundTransparency = 1,
-                    Text = "",
-                    Parent = ButtonFrame
-                })
-                
-                -- Callback по умолчанию
-                local callback = options.Callback or function() end
-                
-                ButtonBtn.MouseButton1Click:Connect(function()
-                    callback()
-                end)
-                
-                -- Эффекты наведения
-                ButtonBtn.MouseEnter:Connect(function()
-                    TweenService:Create(ButtonFrame, TweenInfo.new(0.15), {
-                        BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                    }):Play()
-                end)
-                
-                ButtonBtn.MouseLeave:Connect(function()
-                    TweenService:Create(ButtonFrame, TweenInfo.new(0.15), {
-                        BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-                    }):Play()
-                end)
-                
-                -- Метод для обновления кнопки
-                function Button:SetText(text)
-                    ButtonLabel.Text = text
-                end
-                
-                return Button
-            end
-            
-            function Section:AddToggle(options)
-                options = options or {}
-                local Toggle = {}
-                Toggle.Value = options.Default or false
-                
-                local ToggleFrame = OrionLib:Create("Frame", {
-                    Name = "Toggle",
-                    Size = UDim2.new(1, 0, 0, 25),
-                    BackgroundTransparency = 1,
-                    Parent = SectionContainer
-                })
-                
-                local ToggleButton = OrionLib:Create("TextButton", {
-                    Name = "ToggleBtn",
-                    Size = UDim2.new(0, 40, 0, 20),
-                    Position = UDim2.new(1, -40, 0, 2),
-                    BackgroundColor3 = Toggle.Value and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(60, 60, 60),
-                    BorderSizePixel = 0,
-                    Text = "",
-                    Parent = ToggleFrame
-                })
-                
-                OrionLib:Create("UICorner", {
-                    CornerRadius = UDim.new(0, 10),
-                    Parent = ToggleButton
-                })
-                
-                local ToggleIndicator = OrionLib:Create("Frame", {
-                    Name = "Indicator",
-                    Size = UDim2.new(0, 16, 0, 16),
-                    Position = Toggle.Value and UDim2.new(1, -18, 0, 2) or UDim2.new(0, 2, 0, 2),
-                    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-                    BorderSizePixel = 0,
-                    Parent = ToggleButton
-                })
-                
-                OrionLib:Create("UICorner", {
-                    CornerRadius = UDim.new(1, 0),
-                    Parent = ToggleIndicator
-                })
-                
-                local ToggleLabel = OrionLib:Create("TextLabel", {
-                    Name = "Label",
-                    Size = UDim2.new(1, -45, 1, 0),
-                    BackgroundTransparency = 1,
-                    Text = options.Name or "Toggle",
-                    TextColor3 = Color3.fromRGB(220, 220, 220),
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    Font = Enum.Font.Gotham,
-                    TextSize = 13,
-                    Parent = ToggleFrame
-                })
-                
-                local callback = options.Callback or function() end
-                
-                function Toggle:Set(value)
-                    Toggle.Value = value
-                    
-                    TweenService:Create(ToggleButton, TweenInfo.new(0.2), {
-                        BackgroundColor3 = value and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(60, 60, 60)
-                    }):Play()
-                    
-                    TweenService:Create(ToggleIndicator, TweenInfo.new(0.2), {
-                        Position = value and UDim2.new(1, -18, 0, 2) or UDim2.new(0, 2, 0, 2)
-                    }):Play()
-                    
-                    callback(value)
-                end
-                
-                ToggleButton.MouseButton1Click:Connect(function()
-                    Toggle:Set(not Toggle.Value)
-                end)
-                
-                -- Эффекты наведения
-                ToggleButton.MouseEnter:Connect(function()
-                    if not Toggle.Value then
-                        TweenService:Create(ToggleButton, TweenInfo.new(0.15), {
-                            BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-                        }):Play()
-                    end
-                end)
-                
-                ToggleButton.MouseLeave:Connect(function()
-                    if not Toggle.Value then
-                        TweenService:Create(ToggleButton, TweenInfo.new(0.15), {
-                            BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-                        }):Play()
-                    end
-                end)
-                
-                -- Метод для получения значения
-                function Toggle:GetValue()
-                    return Toggle.Value
-                end
-                
-                return Toggle
-            end
-            
-            function Section:AddLabel(options)
-                options = options or {}
-                
-                local Label = OrionLib:Create("TextLabel", {
-                    Name = "Label",
-                    Size = UDim2.new(1, 0, 0, 20),
-                    BackgroundTransparency = 1,
-                    Text = options.Name or "Label",
-                    TextColor3 = Color3.fromRGB(150, 150, 150),
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    Font = Enum.Font.Gotham,
-                    TextSize = 12,
-                    Parent = SectionContainer
-                })
-                
-                return Label
-            end
-            
-            return Section
-        end
+        local ButtonLabel = OrionLib:Create("TextLabel", {
+            Name = "Label",
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            Text = name,
+            TextColor3 = Color3.fromRGB(220, 220, 220),
+            Font = Enum.Font.Gotham,
+            TextSize = 12,
+            Parent = ButtonFrame
+        })
         
-        return Tab
+        local ButtonBtn = OrionLib:Create("TextButton", {
+            Name = "Button",
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            Text = "",
+            Parent = ButtonFrame
+        })
+        
+        ButtonBtn.MouseButton1Click:Connect(function()
+            if callback then callback() end
+        end)
+        
+        table.insert(Window.Elements, ButtonFrame)
+        return ButtonFrame
     end
     
-    -- Помещаем GUI в CoreGui для самого высокого слоя
+    function Window:AddToggle(name, default, callback)
+        local Toggle = {Value = default or false}
+        
+        local ToggleFrame = OrionLib:Create("Frame", {
+            Name = name .. "Toggle",
+            Size = UDim2.new(1, 0, 0, 20),
+            BackgroundTransparency = 1,
+            Parent = Container
+        })
+        
+        local ToggleLabel = OrionLib:Create("TextLabel", {
+            Name = "Label",
+            Size = UDim2.new(1, -45, 1, 0),
+            BackgroundTransparency = 1,
+            Text = name,
+            TextColor3 = Color3.fromRGB(220, 220, 220),
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Font = Enum.Font.Gotham,
+            TextSize = 12,
+            Parent = ToggleFrame
+        })
+        
+        local ToggleButton = OrionLib:Create("TextButton", {
+            Name = "ToggleBtn",
+            Size = UDim2.new(0, 35, 0, 20),
+            Position = UDim2.new(1, -35, 0, 0),
+            BackgroundColor3 = Toggle.Value and Color3.fromRGB(0, 120, 215) or Color3.fromRGB(60, 60, 60),
+            BorderSizePixel = 0,
+            Text = "",
+            Parent = ToggleFrame
+        })
+        
+        local ToggleIndicator = OrionLib:Create("Frame", {
+            Name = "Indicator",
+            Size = UDim2.new(0, 16, 0, 16),
+            Position = Toggle.Value and UDim2.new(1, -18, 0, 2) or UDim2.new(0, 2, 0, 2),
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BorderSizePixel = 0,
+            Parent = ToggleButton
+        })
+        
+        function Toggle:Set(value)
+            Toggle.Value = value
+            TweenService:Create(ToggleButton, TweenInfo.new(0.2), {
+                BackgroundColor3 = value and Color3.fromRGB(0, 120, 215) or Color3.fromRGB(60, 60, 60)
+            }):Play()
+            TweenService:Create(ToggleIndicator, TweenInfo.new(0.2), {
+                Position = value and UDim2.new(1, -18, 0, 2) or UDim2.new(0, 2, 0, 2)
+            }):Play()
+            if callback then callback(value) end
+        end
+        
+        ToggleButton.MouseButton1Click:Connect(function()
+            Toggle:Set(not Toggle.Value)
+        end)
+        
+        table.insert(Window.Elements, ToggleFrame)
+        return Toggle
+    end
+    
+    function Window:AddLabel(text)
+        local Label = OrionLib:Create("TextLabel", {
+            Name = "Label",
+            Size = UDim2.new(1, 0, 0, 15),
+            BackgroundTransparency = 1,
+            Text = text,
+            TextColor3 = Color3.fromRGB(180, 180, 180),
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Font = Enum.Font.Gotham,
+            TextSize = 11,
+            Parent = Container
+        })
+        
+        table.insert(Window.Elements, Label)
+        return Label
+    end
+    
+    -- Помещаем GUI
     ScreenGui.Parent = CoreGui
     
-    table.insert(OrionLib.Windows, Window)
     return Window
-end
-
--- Уведомления (как в Orion)
-function OrionLib:MakeNotification(options)
-    options = options or {}
-    
-    -- Создание уведомления
-    local notification = Instance.new("ScreenGui")
-    notification.Name = "Notification"
-    notification.ResetOnSpawn = false
-    notification.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    notification.DisplayOrder = 1000
-    
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 300, 0, 80)
-    frame.Position = UDim2.new(1, -320, 1, -100)
-    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    frame.BorderSizePixel = 0
-    frame.Parent = notification
-    
-    Instance.new("UICorner", frame)
-    
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -10, 0, 30)
-    title.Position = UDim2.new(0, 10, 0, 10)
-    title.BackgroundTransparency = 1
-    title.Text = options.Title or "Notification"
-    title.TextColor3 = Color3.fromRGB(220, 220, 220)
-    title.Font = Enum.Font.GothamSemibold
-    title.TextSize = 16
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = frame
-    
-    local content = Instance.new("TextLabel")
-    content.Size = UDim2.new(1, -10, 1, -50)
-    content.Position = UDim2.new(0, 10, 0, 40)
-    content.BackgroundTransparency = 1
-    content.Text = options.Content or "Content"
-    content.TextColor3 = Color3.fromRGB(180, 180, 180)
-    content.Font = Enum.Font.Gotham
-    content.TextSize = 14
-    content.TextXAlignment = Enum.TextXAlignment.Left
-    content.TextYAlignment = Enum.TextYAlignment.Top
-    content.TextWrapped = true
-    content.Parent = frame
-    
-    notification.Parent = CoreGui
-    
-    -- Автоудаление через время
-    if options.Time then
-        task.delay(options.Time, function()
-            frame:Destroy()
-        end)
-    end
-    
-    return notification
 end
 
 return OrionLib
