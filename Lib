@@ -1,0 +1,122 @@
+--// Custom UI Library
+
+local Library = {}
+Library.Windows = {}
+Library.MaxWindows = 5
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+-- ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "CustomUILibrary"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+-- Constants
+local WINDOW_WIDTH = 260
+local WINDOW_HEIGHT = 300
+local WINDOW_SPACING = 10
+local TOP_OFFSET = 20
+
+-- Update window positions
+local function UpdateWindowPositions()
+	for i, window in ipairs(Library.Windows) do
+		local x = (i - 1) * (WINDOW_WIDTH + WINDOW_SPACING) + WINDOW_SPACING
+		window.Main.Position = UDim2.new(0, x, 0, TOP_OFFSET)
+	end
+end
+
+-- Create Window
+function Library:CreateWindow(config)
+	if #Library.Windows >= Library.MaxWindows then
+		warn("Maximum windows reached (5)")
+		return
+	end
+
+	config = config or {}
+
+	local Name = config.Name or "Window"
+	local Color = config.Color or Color3.fromRGB(35, 35, 35)
+	local Font = config.Font or Enum.Font.Gotham
+
+	-- Main Frame
+	local Main = Instance.new("Frame")
+	Main.Size = UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT)
+	Main.BackgroundColor3 = Color
+	Main.BorderSizePixel = 0
+	Main.Parent = ScreenGui
+
+	local Corner = Instance.new("UICorner")
+	Corner.CornerRadius = UDim.new(0, 8)
+	Corner.Parent = Main
+
+	-- TopBar
+	local TopBar = Instance.new("Frame")
+	TopBar.Size = UDim2.fromOffset(WINDOW_WIDTH, 32)
+	TopBar.BackgroundColor3 = Color
+	TopBar.BorderSizePixel = 0
+	TopBar.Parent = Main
+
+	local TopCorner = Instance.new("UICorner")
+	TopCorner.CornerRadius = UDim.new(0, 8)
+	TopCorner.Parent = TopBar
+
+	-- Title
+	local Title = Instance.new("TextLabel")
+	Title.Size = UDim2.new(1, -40, 1, 0)
+	Title.Position = UDim2.fromOffset(10, 0)
+	Title.BackgroundTransparency = 1
+	Title.Text = Name
+	Title.TextColor3 = Color3.new(1, 1, 1)
+	Title.Font = Font
+	Title.TextScaled = true
+	Title.TextXAlignment = Enum.TextXAlignment.Left
+	Title.TextYAlignment = Enum.TextYAlignment.Center
+	Title.Parent = TopBar
+
+	-- Minimize Button
+	local Minimize = Instance.new("TextButton")
+	Minimize.Size = UDim2.fromOffset(30, 24)
+	Minimize.Position = UDim2.new(1, -35, 0.5, -12)
+	Minimize.BackgroundTransparency = 1
+	Minimize.Text = "–"
+	Minimize.TextColor3 = Color3.new(1, 1, 1)
+	Minimize.Font = Font
+	Minimize.TextScaled = true
+	Minimize.Parent = TopBar
+
+	-- Window Object
+	local Window = {}
+	Window.Main = Main
+	Window.Minimized = false
+
+	function Window:Toggle()
+		Window.Minimized = not Window.Minimized
+
+		local targetSize
+		if Window.Minimized then
+			targetSize = UDim2.fromOffset(WINDOW_WIDTH, 32)
+		else
+			targetSize = UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT)
+		end
+
+		TweenService:Create(
+			Main,
+			TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{ Size = targetSize }
+		):Play()
+	end
+
+	Minimize.MouseButton1Click:Connect(function()
+		Window:Toggle()
+	end)
+
+	table.insert(Library.Windows, Window)
+	UpdateWindowPositions()
+
+	return Window
+end
+
+return Library
