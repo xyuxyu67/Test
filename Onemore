@@ -1,0 +1,128 @@
+--[[ Simple Orion-like GUI Library (Window part) Author: ChatGPT Notes:
+
+Max 5 windows
+
+Each window offset to the right
+
+Draggable
+
+Collapse/Expand button (+ / -) ]]
+
+
+local Library = {}
+
+-- CONFIG local MAX_WINDOWS = 5 local WINDOW_WIDTH = 100 local WINDOW_HEIGHT = 25 local WINDOW_OFFSET_X = 110
+
+-- SERVICES local UIS = game:GetService("UserInputService") local Players = game:GetService("Players") local LocalPlayer = Players.LocalPlayer
+
+-- STATE Library.Windows = {}
+
+-- DRAG FUNCTION local function makeDraggable(frame, dragHandle) local dragging = false local dragStart, startPos
+
+dragHandle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+end
+
+-- CREATE WINDOW function Library:CreateWindow(title) if #Library.Windows >= MAX_WINDOWS then warn("Maximum windows limit reached (5)") return nil end
+
+-- ScreenGui
+local gui = Instance.new("ScreenGui")
+gui.Name = "CustomUILibrary"
+gui.ResetOnSpawn = false
+gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Main Frame
+local window = Instance.new("Frame")
+window.Size = UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT)
+window.Position = UDim2.fromOffset(#Library.Windows * WINDOW_OFFSET_X + 20, 100)
+window.BackgroundColor3 = Color3.fromRGB(25, 25, 25) -- very dark gray
+window.BorderSizePixel = 0
+window.Parent = gui
+
+-- Top Bar
+local topBar = Instance.new("TextButton")
+topBar.Size = UDim2.fromScale(1, 1)
+topBar.BackgroundTransparency = 1
+topBar.Text = ""
+topBar.Parent = window
+
+-- Title
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -20, 1, 0)
+titleLabel.Position = UDim2.fromOffset(20, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = title or "Window"
+titleLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.TextYAlignment = Enum.TextYAlignment.Center
+titleLabel.Font = Enum.Font.Gotham
+titleLabel.TextSize = 12
+titleLabel.Parent = window
+
+-- Collapse Button
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.fromOffset(20, 20)
+toggleBtn.Position = UDim2.fromOffset(0, 2)
+toggleBtn.BackgroundTransparency = 1
+toggleBtn.Text = "+"
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 14
+toggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+toggleBtn.Parent = window
+
+-- Content Frame (future sections/buttons)
+local content = Instance.new("Frame")
+content.Position = UDim2.fromOffset(0, WINDOW_HEIGHT)
+content.Size = UDim2.fromOffset(WINDOW_WIDTH, 0)
+content.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+content.BorderSizePixel = 0
+content.Visible = false
+content.Parent = window
+
+-- STATE
+local opened = false
+
+toggleBtn.MouseButton1Click:Connect(function()
+    opened = not opened
+    toggleBtn.Text = opened and "-" or "+"
+    content.Visible = opened
+end)
+
+makeDraggable(window, topBar)
+
+-- Window Object
+local WindowObject = {}
+WindowObject.Frame = window
+WindowObject.Content = content
+
+table.insert(Library.Windows, WindowObject)
+
+return WindowObject
+
+end
+
+return Library
