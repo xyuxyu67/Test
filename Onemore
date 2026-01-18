@@ -1,120 +1,451 @@
---[[ FULL WORKING ROBLOX GUI LIBRARY (ORION-LIKE) PASTE THIS FILE AS-IS LOAD WITH loadstring(game:HttpGet(URL))() ]]
+-- Roblox Dark GUI Library
+-- По аналогии с Orion Library
 
----------------- SERVICES ---------------- local Players = game:GetService("Players") local UserInputService = game:GetService("UserInputService")
+local Library = {}
 
-local LocalPlayer = Players.LocalPlayer
+-- Настройки
+Library.WindowCount = 0
+Library.MaxWindows = 5
+Library.Windows = {}
+Library.Dragging = false
+Library.DragInput = nil
+Library.DragStart = nil
+Library.DragStartPos = nil
 
----------------- SCREEN GUI ---------------- local ScreenGui = Instance.new("ScreenGui") ScreenGui.Name = "CustomUILibrary" ScreenGui.ResetOnSpawn = false ScreenGui.IgnoreGuiInset = true ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+-- Сервисы
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
----------------- LIBRARY ---------------- local Library = {} Library.Windows = {}
-
----------------- CONFIG ---------------- local MAX_WINDOWS = 5 local WINDOW_WIDTH = 100 local WINDOW_HEIGHT = 25 local WINDOW_OFFSET_X = 110
-
----------------- DRAG FUNCTION ---------------- local function MakeDraggable(frame, handle) local dragging = false local dragStart local startPos
-
-handle.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = frame.Position
+-- Утилиты
+function Library:Create(className, properties)
+    local instance = Instance.new(className)
+    for property, value in pairs(properties) do
+        instance[property] = value
     end
-end)
+    return instance
+end
 
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+-- Элемент Window (окно)
+function Library:Window(name)
+    if Library.WindowCount >= Library.MaxWindows then
+        warn("Максимальное количество окон достигнуто (" .. Library.MaxWindows .. ")")
+        return nil
+    end
+    
+    Library.WindowCount += 1
+    local Window = {}
+    
+    -- Создание основного контейнера
+    local ScreenGui = Library:Create("ScreenGui", {
+        Name = name .. "GUI",
+        ResetOnSpawn = false
+    })
+    
+    local MainFrame = Library:Create("Frame", {
+        Name = name .. "Main",
+        Size = UDim2.new(0, 125, 0, 25),
+        Position = UDim2.new(0, 15 + ((Library.WindowCount - 1) * 140), 0, 15),
+        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Parent = ScreenGui
+    })
+    
+    -- Тень/обводка
+    local Outline = Library:Create("UIStroke", {
+        Name = "Outline",
+        Color = Color3.fromRGB(15, 15, 15),
+        Thickness = 2,
+        Parent = MainFrame
+    })
+    
+    -- Заголовок окна
+    local Title = Library:Create("TextLabel", {
+        Name = "Title",
+        Size = UDim2.new(1, -30, 0, 25),
+        Position = UDim2.new(0, 5, 0, 0),
+        BackgroundTransparency = 1,
+        Text = name,
+        TextColor3 = Color3.fromRGB(220, 220, 220),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.Gotham,
+        TextSize = 13,
+        Parent = MainFrame
+    })
+    
+    -- Кнопка сворачивания/разворачивания
+    local ToggleButton = Library:Create("TextButton", {
+        Name = "ToggleButton",
+        Size = UDim2.new(0, 20, 0, 20),
+        Position = UDim2.new(1, -25, 0, 2),
+        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+        BorderSizePixel = 0,
+        Text = "+",
+        TextColor3 = Color3.fromRGB(220, 220, 220),
+        Font = Enum.Font.GothamBold,
+        TextSize = 16,
+        Parent = MainFrame
+    })
+    
+    local ButtonCorner = Library:Create("UICorner", {
+        CornerRadius = UDim.new(0, 4),
+        Parent = ToggleButton
+    })
+    
+    -- Контейнер для элементов
+    local Container = Library:Create("Frame", {
+        Name = "Container",
+        Size = UDim2.new(1, 0, 1, -25),
+        Position = UDim2.new(0, 0, 0, 25),
+        BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+        BackgroundTransparency = 1,
+        ClipsDescendants = true,
+        Parent = MainFrame
+    })
+    
+    local ContainerList = Library:Create("UIListLayout", {
+        Parent = Container,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 5)
+    })
+    
+    local ContainerPadding = Library:Create("UIPadding", {
+        Parent = Container,
+        PaddingTop = UDim.new(0, 5),
+        PaddingLeft = UDim.new(0, 5),
+        PaddingRight = UDim.new(0, 5)
+    })
+    
+    -- Состояния
+    Window.Closed = true
+    Window.ContainerHeight = 0
+    Window.Elements = {}
+    
+    -- Функция переключения сворачивания/разворачивания
+    function Window:Toggle()
+        Window.Closed = not Window.Closed
+        
+        if Window.Closed then
+            ToggleButton.Text = "+"
+            TweenService:Create(MainFrame, TweenInfo.new(0.2), {
+                Size = UDim2.new(0, 125, 0, 25)
+            }):Play()
+        else
+            ToggleButton.Text = "-"
+            local targetHeight = 25 + Window.ContainerHeight
+            TweenService:Create(MainFrame, TweenInfo.new(0.2), {
+                Size = UDim2.new(0, 125, 0, targetHeight)
+            }):Play()
+        end
+    end
+    
+    -- Обработчик нажатия на кнопку
+    ToggleButton.MouseButton1Click:Connect(function()
+        Window:Toggle()
+    end)
+    
+    -- Система перетаскивания
+    local dragToggle = nil
+    local dragInput = nil
+    local dragStart = nil
+    local startPos = nil
+    
+    local function updateInput(input)
         local delta = input.Position - dragStart
-        frame.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, 
+                                      startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
+    
+    Title.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragToggle = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragToggle = false
+                end
+            end)
+        end
+    end)
+    
+    Title.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragToggle then
+            updateInput(input)
+        end
+    end)
+    
+    -- Методы окна
+    function Window:Section(name)
+        local Section = {}
+        
+        local SectionFrame = Library:Create("Frame", {
+            Name = name .. "Section",
+            Size = UDim2.new(1, 0, 0, 30),
+            BackgroundTransparency = 1,
+            LayoutOrder = #Window.Elements + 1,
+            Parent = Container
+        })
+        
+        local SectionTitle = Library:Create("TextLabel", {
+            Name = "Title",
+            Size = UDim2.new(1, 0, 0, 20),
+            BackgroundTransparency = 1,
+            Text = name,
+            TextColor3 = Color3.fromRGB(180, 180, 180),
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Font = Enum.Font.Gotham,
+            TextSize = 12,
+            Parent = SectionFrame
+        })
+        
+        local Line = Library:Create("Frame", {
+            Name = "Line",
+            Size = UDim2.new(1, 0, 0, 1),
+            Position = UDim2.new(0, 0, 0, 19),
+            BackgroundColor3 = Color3.fromRGB(60, 60, 60),
+            BorderSizePixel = 0,
+            Parent = SectionFrame
+        })
+        
+        local SectionContainer = Library:Create("Frame", {
+            Name = "Container",
+            Size = UDim2.new(1, 0, 0, 0),
+            Position = UDim2.new(0, 0, 0, 25),
+            BackgroundTransparency = 1,
+            Parent = SectionFrame
+        })
+        
+        local SectionList = Library:Create("UIListLayout", {
+            Parent = SectionContainer,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Padding = UDim.new(0, 5)
+        })
+        
+        table.insert(Window.Elements, SectionFrame)
+        Window.ContainerHeight += 30
+        
+        if not Window.Closed then
+            local targetHeight = 25 + Window.ContainerHeight
+            MainFrame.Size = UDim2.new(0, 125, 0, targetHeight)
+        end
+        
+        -- Методы секции
+        function Section:Button(name, callback)
+            local Button = {}
+            
+            local ButtonFrame = Library:Create("Frame", {
+                Name = name .. "Button",
+                Size = UDim2.new(1, 0, 0, 25),
+                BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+                BorderSizePixel = 0,
+                Parent = SectionContainer
+            })
+            
+            local ButtonCorner = Library:Create("UICorner", {
+                CornerRadius = UDim.new(0, 4),
+                Parent = ButtonFrame
+            })
+            
+            local ButtonLabel = Library:Create("TextLabel", {
+                Name = "Label",
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = name,
+                TextColor3 = Color3.fromRGB(220, 220, 220),
+                Font = Enum.Font.Gotham,
+                TextSize = 12,
+                Parent = ButtonFrame
+            })
+            
+            local ButtonButton = Library:Create("TextButton", {
+                Name = "Button",
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = "",
+                Parent = ButtonFrame
+            })
+            
+            ButtonButton.MouseButton1Click:Connect(function()
+                if callback then
+                    callback()
+                end
+            end)
+            
+            ButtonButton.MouseEnter:Connect(function()
+                TweenService:Create(ButtonFrame, TweenInfo.new(0.1), {
+                    BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                }):Play()
+            end)
+            
+            ButtonButton.MouseLeave:Connect(function()
+                TweenService:Create(ButtonFrame, TweenInfo.new(0.1), {
+                    BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                }):Play()
+            end)
+            
+            SectionContainer.Size = UDim2.new(1, 0, 0, SectionList.AbsoluteContentSize.Y)
+            Window.ContainerHeight += 25
+            
+            if not Window.Closed then
+                local targetHeight = 25 + Window.ContainerHeight
+                MainFrame.Size = UDim2.new(0, 125, 0, targetHeight)
+            end
+            
+            return Button
+        end
+        
+        function Section:Toggle(name, default, callback)
+            local Toggle = {}
+            Toggle.Value = default or false
+            
+            local ToggleFrame = Library:Create("Frame", {
+                Name = name .. "Toggle",
+                Size = UDim2.new(1, 0, 0, 20),
+                BackgroundTransparency = 1,
+                Parent = SectionContainer
+            })
+            
+            local ToggleButton = Library:Create("TextButton", {
+                Name = "ToggleButton",
+                Size = UDim2.new(0, 35, 0, 20),
+                Position = UDim2.new(1, -35, 0, 0),
+                BackgroundColor3 = Toggle.Value and Color3.fromRGB(0, 120, 215) or Color3.fromRGB(60, 60, 60),
+                BorderSizePixel = 0,
+                Text = "",
+                Parent = ToggleFrame
+            })
+            
+            local ToggleCorner = Library:Create("UICorner", {
+                CornerRadius = UDim.new(0, 10),
+                Parent = ToggleButton
+            })
+            
+            local ToggleIndicator = Library:Create("Frame", {
+                Name = "Indicator",
+                Size = UDim2.new(0, 16, 0, 16),
+                Position = Toggle.Value and UDim2.new(1, -18, 0, 2) or UDim2.new(0, 2, 0, 2),
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                BorderSizePixel = 0,
+                Parent = ToggleButton
+            })
+            
+            local IndicatorCorner = Library:Create("UICorner", {
+                CornerRadius = UDim.new(1, 0),
+                Parent = ToggleIndicator
+            })
+            
+            local ToggleLabel = Library:Create("TextLabel", {
+                Name = "Label",
+                Size = UDim2.new(1, -40, 1, 0),
+                BackgroundTransparency = 1,
+                Text = name,
+                TextColor3 = Color3.fromRGB(220, 220, 220),
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Font = Enum.Font.Gotham,
+                TextSize = 12,
+                Parent = ToggleFrame
+            })
+            
+            function Toggle:Set(value)
+                Toggle.Value = value
+                
+                TweenService:Create(ToggleButton, TweenInfo.new(0.2), {
+                    BackgroundColor3 = value and Color3.fromRGB(0, 120, 215) or Color3.fromRGB(60, 60, 60)
+                }):Play()
+                
+                TweenService:Create(ToggleIndicator, TweenInfo.new(0.2), {
+                    Position = value and UDim2.new(1, -18, 0, 2) or UDim2.new(0, 2, 0, 2)
+                }):Play()
+                
+                if callback then
+                    callback(value)
+                end
+            end
+            
+            ToggleButton.MouseButton1Click:Connect(function()
+                Toggle:Set(not Toggle.Value)
+            end)
+            
+            SectionContainer.Size = UDim2.new(1, 0, 0, SectionList.AbsoluteContentSize.Y)
+            Window.ContainerHeight += 20
+            
+            if not Window.Closed then
+                local targetHeight = 25 + Window.ContainerHeight
+                MainFrame.Size = UDim2.new(0, 125, 0, targetHeight)
+            end
+            
+            return Toggle
+        end
+        
+        function Section:Label(text)
+            local Label = {}
+            
+            local LabelFrame = Library:Create("TextLabel", {
+                Name = "Label",
+                Size = UDim2.new(1, 0, 0, 15),
+                BackgroundTransparency = 1,
+                Text = text,
+                TextColor3 = Color3.fromRGB(180, 180, 180),
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Font = Enum.Font.Gotham,
+                TextSize = 11,
+                Parent = SectionContainer
+            })
+            
+            SectionContainer.Size = UDim2.new(1, 0, 0, SectionList.AbsoluteContentSize.Y)
+            Window.ContainerHeight += 15
+            
+            if not Window.Closed then
+                local targetHeight = 25 + Window.ContainerHeight
+                MainFrame.Size = UDim2.new(0, 125, 0, targetHeight)
+            end
+            
+            return Label
+        end
+        
+        return Section
     end
-end)
-
+    
+    function Window:Hide()
+        ScreenGui.Enabled = false
+    end
+    
+    function Window:Show()
+        ScreenGui.Enabled = true
+    end
+    
+    function Window:Destroy()
+        ScreenGui:Destroy()
+        Library.WindowCount -= 1
+    end
+    
+    -- Помещаем GUI в игрока
+    ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    
+    table.insert(Library.Windows, Window)
+    return Window
 end
 
----------------- CREATE WINDOW ---------------- function Library:CreateWindow(options) if #Library.Windows >= MAX_WINDOWS then warn("MAX WINDOWS LIMIT (5)") return nil end
+-- Пример использования:
+-- local Window = Library:Window("Меню")
+-- local MainSection = Window:Section("Основное")
+-- MainSection:Button("Кнопка", function()
+--     print("Кнопка нажата!")
+-- end)
+-- 
+-- local Toggle = MainSection:Toggle("Включить", false, function(value)
+--     print("Тоггл:", value)
+-- end)
+-- 
+-- MainSection:Label("Это метка")
 
-options = options or {}
-local TitleText = options.Title or "Window"
-local TitleFont = options.Font or Enum.Font.Gotham
-
----------------- MAIN FRAME ----------------
-local Window = Instance.new("Frame")
-Window.Size = UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT)
-Window.Position = UDim2.fromOffset(#Library.Windows * WINDOW_OFFSET_X + 20, 100)
-Window.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-Window.BorderSizePixel = 0
-Window.Parent = ScreenGui
-
----------------- TOP BAR ----------------
-local TopBar = Instance.new("TextButton")
-TopBar.Size = UDim2.fromScale(1, 1)
-TopBar.BackgroundTransparency = 1
-TopBar.Text = ""
-TopBar.Parent = Window
-
----------------- TOGGLE BUTTON ----------------
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.fromOffset(20, 20)
-ToggleButton.Position = UDim2.fromOffset(0, 2)
-ToggleButton.BackgroundTransparency = 1
-ToggleButton.Text = "+"
-ToggleButton.Font = Enum.Font.GothamBold
-ToggleButton.TextSize = 14
-ToggleButton.TextColor3 = Color3.fromRGB(220, 220, 220)
-ToggleButton.Parent = Window
-
----------------- TITLE ----------------
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -20, 1, 0)
-Title.Position = UDim2.fromOffset(20, 0)
-Title.BackgroundTransparency = 1
-Title.Text = TitleText
-Title.Font = TitleFont
-Title.TextSize = 12
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.TextYAlignment = Enum.TextYAlignment.Center
-Title.TextColor3 = Color3.fromRGB(230, 230, 230)
-Title.Parent = Window
-
----------------- CONTENT ----------------
-local Content = Instance.new("Frame")
-Content.Position = UDim2.fromOffset(0, WINDOW_HEIGHT)
-Content.Size = UDim2.fromOffset(WINDOW_WIDTH, 0)
-Content.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
-Content.BorderSizePixel = 0
-Content.Visible = false
-Content.Parent = Window
-
----------------- TOGGLE LOGIC ----------------
-local Opened = false
-
-ToggleButton.MouseButton1Click:Connect(function()
-    Opened = not Opened
-    ToggleButton.Text = Opened and "-" or "+"
-    Content.Visible = Opened
-end)
-
----------------- DRAG ----------------
-MakeDraggable(Window, TopBar)
-
----------------- WINDOW OBJECT ----------------
-local WindowObject = {}
-WindowObject.Frame = Window
-WindowObject.Content = Content
-
-table.insert(Library.Windows, WindowObject)
-
-return WindowObject
-
-end
-
----------------- RETURN ---------------- return Library
+return Library
