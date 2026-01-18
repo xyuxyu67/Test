@@ -1,6 +1,7 @@
 --[[ 
-    ========== UI LIBRARY ========== 
-    Сохрани этот код где-то и используй loadstring 
+    ========== MM2 CUSTOM UI LIBRARY ========== 
+    Дизайн: 100% Оригинал
+    Структура: Модульная (Orion-like)
 ]]
 
 local Library = {}
@@ -8,7 +9,7 @@ local Library = {}
 function Library.new()
     local Lib = {}
     
-    -- ==================== GUI SETTINGS ====================
+    -- [SETTINGS] Цвета и настройки из оригинала
     local SETTINGS = {
         Colors = {
             MainBackground = Color3.fromRGB(40, 40, 40),
@@ -55,129 +56,93 @@ function Library.new()
     }
 
     local CoreGui = game:GetService("CoreGui")
-    local Players = game:GetService("Players")
+    local LP = game:GetService("Players").LocalPlayer
     local UIS = game:GetService("UserInputService")
-    local LP = Players.LocalPlayer
-    local GUI_NAME = "MM2Hub_GUI"
+    local GUI_NAME = "MM2Hub_Interface"
 
-    -- Удаление старого GUI
-    pcall(function()
-        if CoreGui:FindFirstChild(GUI_NAME) then CoreGui:FindFirstChild(GUI_NAME):Destroy() end
-        if LP.PlayerGui:FindFirstChild(GUI_NAME) then LP.PlayerGui:FindFirstChild(GUI_NAME):Destroy() end
-    end)
+    -- Очистка старого GUI
+    if CoreGui:FindFirstChild(GUI_NAME) then CoreGui:FindFirstChild(GUI_NAME):Destroy() end
+    if LP.PlayerGui:FindFirstChild(GUI_NAME) then LP.PlayerGui:FindFirstChild(GUI_NAME):Destroy() end
 
-    function Lib:CreateWindow(windowTitle)
+    function Lib:CreateWindow(Settings)
+        local TitleText = Settings.Name or "Hub"
+        
         local gui = Instance.new("ScreenGui")
         gui.Name = GUI_NAME
         gui.ResetOnSpawn = false
-        if pcall(function() gui.Parent = CoreGui end) then
-            gui.Parent = CoreGui
-        else
-            gui.Parent = LP:WaitForChild("PlayerGui")
-        end
+        if pcall(function() gui.Parent = CoreGui end) then gui.Parent = CoreGui else gui.Parent = LP.PlayerGui end
 
-        -- Minimize Button Container
-        local showContainer = Instance.new("Frame")
+        -- Кнопка Show (свернутое состояние)
+        local showContainer = Instance.new("Frame", gui)
         showContainer.Size = UDim2.new(0, 140, 0, 40)
         showContainer.Position = UDim2.new(0.5, -70, 0, 14)
         showContainer.BackgroundColor3 = SETTINGS.Colors.TopBar
         showContainer.BackgroundTransparency = SETTINGS.Transparency.Background
         showContainer.Visible = false
-        showContainer.Parent = gui
         Instance.new("UICorner", showContainer).CornerRadius = UDim.new(0, 14)
-
+        
         local showStroke = Instance.new("UIStroke", showContainer)
-        showStroke.Color = SETTINGS.Colors.Stroke
-        showStroke.Thickness = 1
-        showStroke.Transparency = SETTINGS.Transparency.Stroke
-
+        showStroke.Color = SETTINGS.Colors.Stroke; showStroke.Transparency = SETTINGS.Transparency.Stroke
+        
         local showBtn = Instance.new("TextButton", showContainer)
-        showBtn.Size = UDim2.fromScale(1, 1)
-        showBtn.BackgroundTransparency = 1
-        showBtn.Text = "Show"
-        showBtn.Font = SETTINGS.Fonts.ItemTitle
-        showBtn.TextSize = 18
-        showBtn.TextColor3 = SETTINGS.Colors.TextMain
+        showBtn.Size = UDim2.fromScale(1, 1); showBtn.BackgroundTransparency = 1
+        showBtn.Text = "Show"; showBtn.Font = SETTINGS.Fonts.ItemTitle
+        showBtn.TextSize = 18; showBtn.TextColor3 = SETTINGS.Colors.TextMain
 
-        -- Main Frame
+        -- Главное окно
         local main = Instance.new("Frame", gui)
         main.Size = UDim2.fromScale(0.52, 0.85)
         main.Position = UDim2.fromScale(0.24, 0.075)
         main.BackgroundColor3 = SETTINGS.Colors.MainBackground
         main.BackgroundTransparency = SETTINGS.Transparency.Background
-
         Instance.new("UICorner", main).CornerRadius = UDim.new(0, SETTINGS.Sizes.CornerRadius)
+        
         local mainStroke = Instance.new("UIStroke", main)
-        mainStroke.Color = SETTINGS.Colors.Stroke
-        mainStroke.Thickness = 1
-        mainStroke.Transparency = SETTINGS.Transparency.Stroke
+        mainStroke.Color = SETTINGS.Colors.Stroke; mainStroke.Transparency = SETTINGS.Transparency.Stroke
 
-        -- Top Bar
+        -- Верхняя панель
         local top = Instance.new("Frame", main)
         top.Size = UDim2.new(1, 0, 0, SETTINGS.Sizes.TopHeight)
-        top.BackgroundColor3 = SETTINGS.Colors.TopBar
-        top.ZIndex = 3
+        top.BackgroundColor3 = SETTINGS.Colors.TopBar; top.ZIndex = 3
         Instance.new("UICorner", top).CornerRadius = UDim.new(0, SETTINGS.Sizes.CornerRadius)
 
         local titleIcon = Instance.new("ImageLabel", top)
-        titleIcon.Size = UDim2.new(0, 32, 0, 32)
-        titleIcon.Position = UDim2.new(0, 14, 0, 12)
-        titleIcon.BackgroundTransparency = 1
-        titleIcon.Image = "rbxassetid://99419671323896" -- Заменил на нейтральную или оставь ту же
-        titleIcon.ZIndex = 4
+        titleIcon.Size = UDim2.new(0, 32, 0, 32); titleIcon.Position = UDim2.new(0, 14, 0, 12)
+        titleIcon.BackgroundTransparency = 1; titleIcon.Image = "rbxassetid://99419671323896"; titleIcon.ZIndex = 4
 
         local titleLbl = Instance.new("TextLabel", top)
-        titleLbl.Size = UDim2.new(1, -160, 1, 0)
-        titleLbl.Position = UDim2.new(0, 56, 0, 0)
-        titleLbl.BackgroundTransparency = 1
-        titleLbl.Text = windowTitle or "MM2 Hub"
-        titleLbl.Font = SETTINGS.Fonts.Title
-        titleLbl.TextSize = 19
-        titleLbl.TextXAlignment = Enum.TextXAlignment.Left
-        titleLbl.TextColor3 = SETTINGS.Colors.TextMain
-        titleLbl.ZIndex = 4
+        titleLbl.Size = UDim2.new(1, -160, 1, 0); titleLbl.Position = UDim2.new(0, 56, 0, 0)
+        titleLbl.BackgroundTransparency = 1; titleLbl.Text = TitleText
+        titleLbl.Font = SETTINGS.Fonts.Title; titleLbl.TextSize = 19
+        titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.TextColor3 = SETTINGS.Colors.TextMain; titleLbl.ZIndex = 4
 
-        -- Window Controls
-        local function createWinBtn(text, xOffset)
+        -- Кнопки окна
+        local function WinBtn(txt, off)
             local b = Instance.new("TextButton", top)
-            b.Size = UDim2.new(0, 36, 0, 36)
-            b.Position = UDim2.new(1, xOffset, 0, 10)
-            b.BackgroundTransparency = 1
-            b.Text = text
-            b.Font = SETTINGS.Fonts.WindowBtn
-            b.TextSize = 32
-            b.TextColor3 = SETTINGS.Colors.TextMain
-            b.ZIndex = 5
+            b.Size = UDim2.new(0, 36, 0, 36); b.Position = UDim2.new(1, off, 0, 10)
+            b.BackgroundTransparency = 1; b.Text = txt; b.Font = SETTINGS.Fonts.WindowBtn
+            b.TextSize = 32; b.TextColor3 = SETTINGS.Colors.TextMain; b.ZIndex = 5
             return b
         end
+        WinBtn("–", -96).MouseButton1Click:Connect(function() main.Visible = false; showContainer.Visible = true end)
+        WinBtn("×", -48).MouseButton1Click:Connect(function() gui:Destroy() end)
+        showBtn.MouseButton1Click:Connect(function() main.Visible = true; showContainer.Visible = false end)
 
-        local minimizeBtn = createWinBtn("–", -96)
-        local closeBtn = createWinBtn("×", -48)
-
-        -- Panels
+        -- Панели
         local contentY = SETTINGS.Sizes.TopHeight + SETTINGS.Sizes.Padding
-        
-        local leftPanel = Instance.new("Frame", main)
-        leftPanel.Position = UDim2.new(0, SETTINGS.Sizes.Padding, 0, contentY)
-        leftPanel.Size = UDim2.new(0.333, -SETTINGS.Sizes.Padding * 1.5, 1, -contentY - SETTINGS.Sizes.Padding)
-        leftPanel.BackgroundColor3 = SETTINGS.Colors.SectionBg
-        leftPanel.BackgroundTransparency = SETTINGS.Transparency.Background
-        Instance.new("UICorner", leftPanel).CornerRadius = UDim.new(0, 16)
+        local leftP = Instance.new("Frame", main)
+        leftP.Position = UDim2.new(0, SETTINGS.Sizes.Padding, 0, contentY)
+        leftP.Size = UDim2.new(0.333, -SETTINGS.Sizes.Padding * 1.5, 1, -contentY - SETTINGS.Sizes.Padding)
+        leftP.BackgroundColor3 = SETTINGS.Colors.SectionBg; leftP.BackgroundTransparency = SETTINGS.Transparency.Background
+        Instance.new("UICorner", leftP).CornerRadius = UDim.new(0, 16)
 
-        local rightPanel = Instance.new("Frame", main)
-        rightPanel.Position = UDim2.new(0.333, SETTINGS.Sizes.Padding / 2, 0, contentY)
-        rightPanel.Size = UDim2.new(0.667, -SETTINGS.Sizes.Padding * 1.5, 1, -contentY - SETTINGS.Sizes.Padding)
-        rightPanel.BackgroundColor3 = SETTINGS.Colors.SectionBg
-        rightPanel.BackgroundTransparency = SETTINGS.Transparency.Background
-        Instance.new("UICorner", rightPanel).CornerRadius = UDim.new(0, 16)
+        local rightP = Instance.new("Frame", main)
+        rightP.Position = UDim2.new(0.333, SETTINGS.Sizes.Padding / 2, 0, contentY)
+        rightP.Size = UDim2.new(0.667, -SETTINGS.Sizes.Padding * 1.5, 1, -contentY - SETTINGS.Sizes.Padding)
+        rightP.BackgroundColor3 = SETTINGS.Colors.SectionBg; rightP.BackgroundTransparency = SETTINGS.Transparency.Background
+        Instance.new("UICorner", rightP).CornerRadius = UDim.new(0, 16)
 
-        -- State Variables
-        local tabY = 14
-        local activeHighlight = nil
-        local firstPage = nil
-        local firstHighlight = nil
-
-        -- Dragging Logic
+        -- Драггинг
         local dragging, dragInput, dragStart, startPos
         top.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -195,256 +160,168 @@ function Library.new()
             end
         end)
 
-        -- Window Actions
-        minimizeBtn.MouseButton1Click:Connect(function() main.Visible = false; showContainer.Visible = true end)
-        showBtn.MouseButton1Click:Connect(function() main.Visible = true; showContainer.Visible = false end)
-        closeBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
+        local WindowHandler = {TabCount = 0, CurrentTabY = 14, ActiveHighlight = nil}
 
-        local WindowObj = {}
-        
-        -- Create Tab Function
-        function WindowObj:CreateTab(name, hasLine)
-            local PageFrame = Instance.new("Frame", rightPanel)
-            PageFrame.Name = name
-            PageFrame.Size = UDim2.fromScale(1, 1)
-            PageFrame.BackgroundTransparency = 1
-            PageFrame.Visible = false
+        function WindowHandler:CreateTab(TabSettings)
+            local TabName = TabSettings.Name or "Tab"
+            local NoLine = TabSettings.NoLine or false
             
-            local holder = Instance.new("Frame", leftPanel)
+            -- Страница справа
+            local Page = Instance.new("Frame", rightP)
+            Page.Name = TabName; Page.Size = UDim2.fromScale(1, 1)
+            Page.BackgroundTransparency = 1; Page.Visible = false
+
+            -- Кнопка слева
+            local holder = Instance.new("Frame", leftP)
             holder.Size = UDim2.new(1, -24, 0, SETTINGS.Sizes.ItemHeight)
-            holder.Position = UDim2.new(0, 12, 0, tabY)
+            holder.Position = UDim2.new(0, 12, 0, self.CurrentTabY)
             holder.BackgroundTransparency = 1
 
             local highlight = Instance.new("Frame", holder)
-            highlight.Size = UDim2.fromScale(1, 1)
-            highlight.BackgroundColor3 = SETTINGS.Colors.Highlight
-            highlight.BackgroundTransparency = SETTINGS.Transparency.Highlight
-            highlight.Visible = false
+            highlight.Size = UDim2.fromScale(1, 1); highlight.BackgroundColor3 = SETTINGS.Colors.Highlight
+            highlight.BackgroundTransparency = SETTINGS.Transparency.Highlight; highlight.Visible = false
             Instance.new("UICorner", highlight).CornerRadius = UDim.new(0, 12)
 
-            if not firstHighlight then 
-                firstHighlight = highlight 
-                firstPage = PageFrame
-                highlight.Visible = true
-                PageFrame.Visible = true
-                activeHighlight = highlight
-            end
-
             local btn = Instance.new("TextButton", holder)
-            btn.Size = UDim2.fromScale(1, 1)
-            btn.BackgroundTransparency = 1
-            btn.Text = name
-            btn.Font = SETTINGS.Fonts.TabButton
-            btn.TextSize = 18
-            btn.TextColor3 = SETTINGS.Colors.TextMain
+            btn.Size = UDim2.fromScale(1, 1); btn.BackgroundTransparency = 1
+            btn.Text = TabName; btn.Font = SETTINGS.Fonts.TabButton
+            btn.TextSize = 18; btn.TextColor3 = SETTINGS.Colors.TextMain
 
+            -- Логика переключения
+            if self.TabCount == 0 then
+                highlight.Visible = true; self.ActiveHighlight = highlight; Page.Visible = true
+            end
+            
             btn.MouseButton1Click:Connect(function()
-                if activeHighlight then activeHighlight.Visible = false end
-                for _, child in pairs(rightPanel:GetChildren()) do 
-                    if child:IsA("Frame") and child ~= PageFrame then child.Visible = false end 
-                end
-                highlight.Visible = true
-                activeHighlight = highlight
-                PageFrame.Visible = true
+                if self.ActiveHighlight then self.ActiveHighlight.Visible = false end
+                for _, p in pairs(rightP:GetChildren()) do if p:IsA("Frame") then p.Visible = false end end
+                highlight.Visible = true; self.ActiveHighlight = highlight; Page.Visible = true
             end)
 
-            if hasLine == nil or hasLine == true then
-                local line = Instance.new("Frame", leftPanel)
+            if not NoLine then
+                local line = Instance.new("Frame", leftP)
                 line.Size = UDim2.new(1, -40, 0, 1)
-                line.Position = UDim2.new(0, 20, 0, tabY + SETTINGS.Sizes.ItemHeight + 6)
-                line.BackgroundColor3 = SETTINGS.Colors.Divider
-                line.BackgroundTransparency = 0.45
+                line.Position = UDim2.new(0, 20, 0, self.CurrentTabY + SETTINGS.Sizes.ItemHeight + 6)
+                line.BackgroundColor3 = SETTINGS.Colors.Divider; line.BackgroundTransparency = 0.45
             end
 
-            tabY = tabY + SETTINGS.Sizes.ItemHeight + SETTINGS.Sizes.ItemGap
+            self.CurrentTabY = self.CurrentTabY + SETTINGS.Sizes.ItemHeight + SETTINGS.Sizes.ItemGap
+            self.TabCount = self.TabCount + 1
 
-            local TabObj = {
-                Frame = PageFrame,
-                CurrentY = 14
-            }
-            return TabObj
-        end
+            local TabHandler = {Page = Page, CurrentY = 14}
 
-        -- Create Toggle Function
-        function WindowObj:CreateToggle(tab, titleTxt, descTxt, callback)
-            local yPos = tab.CurrentY
-            
-            local holder = Instance.new("TextButton", tab.Frame)
-            holder.Name = titleTxt
-            holder.Size = UDim2.new(1, -30, 0, SETTINGS.Sizes.ItemHeight)
-            holder.Position = UDim2.new(0, 15, 0, yPos)
-            holder.BackgroundTransparency = 1
-            holder.Text = ""
-            holder.AutoButtonColor = false
+            function TabHandler:CreateToggle(ItemSettings)
+                local Title = ItemSettings.Name or "Toggle"
+                local Desc = ItemSettings.Desc or ""
+                local Callback = ItemSettings.Callback or function() end
+                local NoLine = ItemSettings.NoLine or false
+                local Default = ItemSettings.Default or false
 
-            local tLabel = Instance.new("TextLabel", holder)
-            tLabel.Size = UDim2.new(1, -60, 0, 18)
-            tLabel.BackgroundTransparency = 1
-            tLabel.Text = titleTxt
-            tLabel.Font = SETTINGS.Fonts.ItemTitle
-            tLabel.TextSize = 16
-            tLabel.TextColor3 = SETTINGS.Colors.TextMain
-            tLabel.TextXAlignment = Enum.TextXAlignment.Left
+                local btn = Instance.new("TextButton", self.Page)
+                btn.Size = UDim2.new(1, -30, 0, SETTINGS.Sizes.ItemHeight)
+                btn.Position = UDim2.new(0, 15, 0, self.CurrentY)
+                btn.BackgroundTransparency = 1; btn.Text = ""; btn.AutoButtonColor = false
 
-            local dLabel = Instance.new("TextLabel", holder)
-            dLabel.Size = UDim2.new(1, -60, 0, 14)
-            dLabel.Position = UDim2.new(0, 0, 0, 18)
-            dLabel.BackgroundTransparency = 1
-            dLabel.Text = descTxt
-            dLabel.Font = SETTINGS.Fonts.ItemDesc
-            dLabel.TextSize = 12
-            dLabel.TextColor3 = SETTINGS.Colors.TextDim
-            dLabel.TextXAlignment = Enum.TextXAlignment.Left
+                local tLbl = Instance.new("TextLabel", btn)
+                tLbl.Size = UDim2.new(1, -60, 0, 18); tLbl.BackgroundTransparency = 1
+                tLbl.Text = Title; tLbl.Font = SETTINGS.Fonts.ItemTitle
+                tLbl.TextSize = 16; tLbl.TextColor3 = SETTINGS.Colors.TextMain
+                tLbl.TextXAlignment = Enum.TextXAlignment.Left
 
-            local box = Instance.new("Frame", holder)
-            box.Name = "Checkbox"
-            box.Size = UDim2.new(0, 22, 0, 22)
-            box.Position = UDim2.new(1, -26, 0.5, -11)
-            box.BackgroundColor3 = SETTINGS.Colors.CheckboxOff
-            Instance.new("UICorner", box).CornerRadius = UDim.new(0, 6)
+                local dLbl = Instance.new("TextLabel", btn)
+                dLbl.Size = UDim2.new(1, -60, 0, 14); dLbl.Position = UDim2.new(0, 0, 0, 18)
+                dLbl.BackgroundTransparency = 1; dLbl.Text = Desc
+                dLbl.Font = SETTINGS.Fonts.ItemDesc; dLbl.TextSize = 12
+                dLbl.TextColor3 = SETTINGS.Colors.TextDim; dLbl.TextXAlignment = Enum.TextXAlignment.Left
 
-            local s = Instance.new("UIStroke", box)
-            s.Color = Color3.fromRGB(200, 200, 200)
-            s.Transparency = 0.5
-            s.Thickness = 1.5
+                local box = Instance.new("Frame", btn)
+                box.Size = UDim2.new(0, 22, 0, 22); box.Position = UDim2.new(1, -26, 0.5, -11)
+                box.BackgroundColor3 = Default and SETTINGS.Colors.CheckboxActive or SETTINGS.Colors.CheckboxOff
+                Instance.new("UICorner", box).CornerRadius = UDim.new(0, 6)
+                local bs = Instance.new("UIStroke", box); bs.Color = Color3.fromRGB(200,200,200); bs.Transparency = 0.5; bs.Thickness = 1.5
 
-            local toggled = false
-            holder.MouseButton1Click:Connect(function()
-                toggled = not toggled
-                box.BackgroundColor3 = toggled and SETTINGS.Colors.CheckboxActive or SETTINGS.Colors.CheckboxOff
-                if callback then callback(toggled) end
-            end)
+                local toggled = Default
+                btn.MouseButton1Click:Connect(function()
+                    toggled = not toggled
+                    box.BackgroundColor3 = toggled and SETTINGS.Colors.CheckboxActive or SETTINGS.Colors.CheckboxOff
+                    Callback(toggled)
+                end)
 
-            -- Separator Line
-            local line = Instance.new("Frame", tab.Frame)
-            line.Size = UDim2.new(1, -40, 0, 1)
-            line.Position = UDim2.new(0, 20, 0, yPos + SETTINGS.Sizes.ItemHeight + 6)
-            line.BackgroundColor3 = SETTINGS.Colors.Divider
-            line.BackgroundTransparency = SETTINGS.Transparency.Divider
-
-            tab.CurrentY = tab.CurrentY + 52 -- 38 height + 14 gap
-        end
-
-        -- Create Social Function
-        function WindowObj:CreateSocial(tab, title, desc, content)
-            local yPos = tab.CurrentY
-            
-            local holder = Instance.new("Frame", tab.Frame)
-            holder.Name = title
-            holder.Size = UDim2.new(1, -30, 0, SETTINGS.Sizes.ItemHeight)
-            holder.Position = UDim2.new(0, 15, 0, yPos)
-            holder.BackgroundTransparency = 1
-
-            local tLabel = Instance.new("TextLabel", holder)
-            tLabel.Size = UDim2.new(1, -80, 0, 18)
-            tLabel.BackgroundTransparency = 1
-            tLabel.Text = title
-            tLabel.Font = SETTINGS.Fonts.ItemTitle
-            tLabel.TextSize = 16
-            tLabel.TextXAlignment = Enum.TextXAlignment.Left
-            
-            -- Rainbow effect
-            task.spawn(function()
-                while tLabel.Parent do
-                    local t = tick()
-                    tLabel.TextColor3 = Color3.fromHSV((t % 5)/5, 1, 1)
-                    task.wait()
+                if not NoLine then
+                    local l = Instance.new("Frame", self.Page)
+                    l.Size = UDim2.new(1, -40, 0, 1); l.Position = UDim2.new(0, 20, 0, self.CurrentY + SETTINGS.Sizes.ItemHeight + 6)
+                    l.BackgroundColor3 = SETTINGS.Colors.Divider; l.BackgroundTransparency = SETTINGS.Transparency.Divider
                 end
-            end)
-
-            local dLabel = Instance.new("TextLabel", holder)
-            dLabel.Size = UDim2.new(1, -80, 0, 14)
-            dLabel.Position = UDim2.new(0, 0, 0, 18)
-            dLabel.BackgroundTransparency = 1
-            dLabel.Text = desc
-            dLabel.Font = SETTINGS.Fonts.ItemDesc
-            dLabel.TextSize = 12
-            dLabel.TextColor3 = SETTINGS.Colors.TextDim
-            dLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-            local copyBtn = Instance.new("TextButton", holder)
-            copyBtn.Name = "CopyButton"
-            copyBtn.Size = UDim2.new(0, 60, 0, 24)
-            copyBtn.Position = UDim2.new(1, -64, 0.5, -12)
-            copyBtn.BackgroundColor3 = SETTINGS.Colors.CopyBtnNormal
-            copyBtn.Text = "Copy"
-            copyBtn.Font = SETTINGS.Fonts.ItemTitle
-            copyBtn.TextSize = 14
-            copyBtn.TextColor3 = SETTINGS.Colors.TextMain
-            copyBtn.AutoButtonColor = false
-            Instance.new("UICorner", copyBtn).CornerRadius = UDim.new(0, 6)
-
-            copyBtn.MouseButton1Click:Connect(function()
-                if setclipboard then
-                    setclipboard(content)
-                    local originalColor = copyBtn.BackgroundColor3
-                    copyBtn.BackgroundColor3 = SETTINGS.Colors.CopyBtnClick
-                    task.wait(0.2)
-                    copyBtn.BackgroundColor3 = originalColor
-                end
-            end)
-
-            local line = Instance.new("Frame", tab.Frame)
-            line.Size = UDim2.new(1, -40, 0, 1)
-            line.Position = UDim2.new(0, 20, 0, yPos + SETTINGS.Sizes.ItemHeight + 6)
-            line.BackgroundColor3 = SETTINGS.Colors.Divider
-            line.BackgroundTransparency = SETTINGS.Transparency.Divider
-
-            tab.CurrentY = tab.CurrentY + 52
-        end
-
-        -- Stats Function
-        function WindowObj:AddStatsBox(tab)
-            local yPos = tab.CurrentY + SETTINGS.Sizes.StatsTopMargin
-            
-            local statsBox = Instance.new("Frame", tab.Frame)
-            statsBox.Name = "StatsBox"
-            statsBox.Size = UDim2.new(1, -30, 0, SETTINGS.Sizes.StatsBoxHeight)
-            statsBox.Position = UDim2.new(0, 15, 0, yPos) 
-            statsBox.BackgroundColor3 = SETTINGS.Colors.StatsBox
-            statsBox.BackgroundTransparency = SETTINGS.Transparency.StatsBox
-            Instance.new("UICorner", statsBox).CornerRadius = UDim.new(0, 12)
-            
-            local statsStroke = Instance.new("UIStroke", statsBox)
-            statsStroke.Color = SETTINGS.Colors.Stroke
-            statsStroke.Thickness = 1
-            statsStroke.Transparency = 0.3
-
-            local statsLayout = Instance.new("UIListLayout", statsBox)
-            statsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            statsLayout.Padding = UDim.new(0, SETTINGS.Sizes.StatsTextGap)
-            statsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-
-            local statsPadding = Instance.new("UIPadding", statsBox)
-            statsPadding.PaddingLeft = UDim.new(0, 12)
-            statsPadding.PaddingTop = UDim.new(0, 4)
-            statsPadding.PaddingBottom = UDim.new(0, 4)
-
-            local function createLbl(text, order)
-                local lbl = Instance.new("TextLabel", statsBox)
-                lbl.LayoutOrder = order
-                lbl.Text = text
-                lbl.Size = UDim2.new(1, 0, 0, SETTINGS.Sizes.StatsFontSize + 4) 
-                lbl.BackgroundTransparency = 1
-                lbl.TextColor3 = SETTINGS.Colors.StatsText
-                lbl.Font = SETTINGS.Fonts.Stats
-                lbl.TextSize = SETTINGS.Sizes.StatsFontSize
-                lbl.TextStrokeTransparency = 1
-                lbl.TextXAlignment = Enum.TextXAlignment.Left
-                return lbl
+                self.CurrentY = self.CurrentY + 52
             end
-            
-            return {
-                TimeLabel = createLbl("Time: 00:00", 1),
-                CoinsLabel = createLbl("Coins: 0", 2),
-                FooterLabel = createLbl("Thanks for using MM2 Hub :)", 3)
-            }
-        end
 
-        return WindowObj
+            function TabHandler:CreateSocial(ItemSettings)
+                local Title = ItemSettings.Name or "Social"
+                local Desc = ItemSettings.Desc or ""
+                local Content = ItemSettings.Content or ""
+                local NoLine = ItemSettings.NoLine or false
+
+                local f = Instance.new("Frame", self.Page)
+                f.Size = UDim2.new(1, -30, 0, SETTINGS.Sizes.ItemHeight)
+                f.Position = UDim2.new(0, 15, 0, self.CurrentY); f.BackgroundTransparency = 1
+
+                local t = Instance.new("TextLabel", f)
+                t.Size = UDim2.new(1, -80, 0, 18); t.BackgroundTransparency = 1
+                t.Text = Title; t.Font = SETTINGS.Fonts.ItemTitle; t.TextSize = 16
+                t.TextXAlignment = Enum.TextXAlignment.Left
+                task.spawn(function() while t.Parent do t.TextColor3 = Color3.fromHSV((tick()%5)/5,1,1) task.wait() end end)
+
+                local d = Instance.new("TextLabel", f)
+                d.Size = UDim2.new(1, -80, 0, 14); d.Position = UDim2.new(0, 0, 0, 18)
+                d.BackgroundTransparency = 1; d.Text = Desc; d.Font = SETTINGS.Fonts.ItemDesc
+                d.TextSize = 12; d.TextColor3 = SETTINGS.Colors.TextDim; d.TextXAlignment = Enum.TextXAlignment.Left
+
+                local b = Instance.new("TextButton", f)
+                b.Size = UDim2.new(0, 60, 0, 24); b.Position = UDim2.new(1, -64, 0.5, -12)
+                b.BackgroundColor3 = SETTINGS.Colors.CopyBtnNormal; b.Text = "Copy"
+                b.Font = SETTINGS.Fonts.ItemTitle; b.TextSize = 14; b.TextColor3 = SETTINGS.Colors.TextMain
+                Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+
+                b.MouseButton1Click:Connect(function()
+                    if setclipboard then setclipboard(Content) end
+                    b.BackgroundColor3 = SETTINGS.Colors.CopyBtnClick
+                    task.wait(0.2); b.BackgroundColor3 = SETTINGS.Colors.CopyBtnNormal
+                end)
+
+                if not NoLine then
+                    local l = Instance.new("Frame", self.Page)
+                    l.Size = UDim2.new(1, -40, 0, 1); l.Position = UDim2.new(0, 20, 0, self.CurrentY + SETTINGS.Sizes.ItemHeight + 6)
+                    l.BackgroundColor3 = SETTINGS.Colors.Divider; l.BackgroundTransparency = SETTINGS.Transparency.Divider
+                end
+                self.CurrentY = self.CurrentY + 52
+            end
+
+            function TabHandler:CreateStats()
+                local box = Instance.new("Frame", self.Page)
+                box.Size = UDim2.new(1, -30, 0, SETTINGS.Sizes.StatsBoxHeight)
+                box.Position = UDim2.new(0, 15, 0, self.CurrentY + SETTINGS.Sizes.StatsTopMargin)
+                box.BackgroundColor3 = SETTINGS.Colors.StatsBox; box.BackgroundTransparency = SETTINGS.Transparency.StatsBox
+                Instance.new("UICorner", box).CornerRadius = UDim.new(0, 12)
+                local s = Instance.new("UIStroke", box); s.Color = SETTINGS.Colors.Stroke; s.Transparency = 0.3
+
+                local layout = Instance.new("UIListLayout", box); layout.SortOrder = Enum.SortOrder.LayoutOrder
+                layout.Padding = UDim.new(0, SETTINGS.Sizes.StatsTextGap); layout.VerticalAlignment = Enum.VerticalAlignment.Center
+                local pad = Instance.new("UIPadding", box); pad.PaddingLeft = UDim.new(0, 12)
+
+                local function mkLbl(ord)
+                    local l = Instance.new("TextLabel", box); l.LayoutOrder = ord
+                    l.Size = UDim2.new(1, 0, 0, SETTINGS.Sizes.StatsFontSize + 4); l.BackgroundTransparency = 1
+                    l.TextColor3 = SETTINGS.Colors.StatsText; l.Font = SETTINGS.Fonts.Stats
+                    l.TextSize = SETTINGS.Sizes.StatsFontSize; l.TextXAlignment = Enum.TextXAlignment.Left
+                    return l
+                end
+                return {Time = mkLbl(1), Coins = mkLbl(2), Footer = mkLbl(3)}
+            end
+
+            return TabHandler
+        end
+        return WindowHandler
     end
-
     return Lib
 end
-
 return Library
