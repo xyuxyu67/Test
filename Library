@@ -1,0 +1,174 @@
+local CoreLibrary = {}
+local Players = game:GetService("Players")
+local LP = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreGui = game:GetService("CoreGui")
+
+-- // GUI CONFIG \\ --
+local SETTINGS = {
+    Colors = {
+        Bg = Color3.fromRGB(25, 25, 25),
+        Section = Color3.fromRGB(35, 35, 35),
+        Text = Color3.fromRGB(255, 255, 255),
+        Accent = Color3.fromRGB(0, 255, 128) -- Зеленый акцент
+    }
+}
+
+-- // INTERNAL GUI BUILDER \\ --
+function CoreLibrary:Init()
+    local lib = {}
+    
+    -- Удаляем старый GUI
+    if CoreGui:FindFirstChild("RamzanLib") then CoreGui.RamzanLib:Destroy() end
+    
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "RamzanLib"
+    ScreenGui.Parent = CoreGui
+    
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 450, 0, 350)
+    MainFrame.Position = UDim2.new(0.5, -225, 0.5, -175)
+    MainFrame.BackgroundColor3 = SETTINGS.Colors.Bg
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Parent = ScreenGui
+    
+    Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+    
+    -- Заголовок
+    local Title = Instance.new("TextLabel")
+    Title.Text = "Ramzan Hub | MM2"
+    Title.Size = UDim2.new(1, -20, 0, 30)
+    Title.Position = UDim2.new(0, 10, 0, 5)
+    Title.BackgroundTransparency = 1
+    Title.TextColor3 = SETTINGS.Colors.Text
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 18
+    Title.Parent = MainFrame
+    
+    -- Контейнер для элементов
+    local Container = Instance.new("ScrollingFrame")
+    Container.Size = UDim2.new(1, -20, 1, -50)
+    Container.Position = UDim2.new(0, 10, 0, 40)
+    Container.BackgroundTransparency = 1
+    Container.ScrollBarThickness = 2
+    Container.Parent = MainFrame
+    
+    local UIList = Instance.new("UIListLayout")
+    UIList.Padding = UDim.new(0, 5)
+    UIList.Parent = Container
+    
+    -- Драг (перетаскивание)
+    local dragInput, dragStart, startPos
+    local function update(input)
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+    MainFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+        end
+    end)
+    MainFrame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
+    end)
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if input == dragInput and dragging then update(input) end
+    end)
+
+    -- // PUBLIC FUNCTIONS (Обертка) \\ --
+    
+    function lib:CreateWindow(titleText)
+        Title.Text = titleText or "Script"
+        return lib
+    end
+    
+    function lib:CreateTab(name)
+        -- В этой простой версии табы просто разделители, 
+        -- но в коде это выглядит как создание вкладки
+        local Label = Instance.new("TextLabel")
+        Label.Text = "--- " .. name .. " ---"
+        Label.Size = UDim2.new(1, 0, 0, 25)
+        Label.BackgroundTransparency = 1
+        Label.TextColor3 = SETTINGS.Colors.Accent
+        Label.Font = Enum.Font.Gotham
+        Label.TextSize = 14
+        Label.Parent = Container
+        return lib
+    end
+    
+    function lib:CreateButton(config)
+        local BtnFrame = Instance.new("Frame")
+        BtnFrame.Size = UDim2.new(1, 0, 0, 35)
+        BtnFrame.BackgroundColor3 = SETTINGS.Colors.Section
+        BtnFrame.Parent = Container
+        Instance.new("UICorner", BtnFrame).CornerRadius = UDim.new(0, 6)
+        
+        local Btn = Instance.new("TextButton")
+        Btn.Size = UDim2.new(1, 0, 1, 0)
+        Btn.BackgroundTransparency = 1
+        Btn.Text = config.Name or "Button"
+        Btn.TextColor3 = SETTINGS.Colors.Text
+        Btn.Font = Enum.Font.GothamSemibold
+        Btn.TextSize = 14
+        Btn.Parent = BtnFrame
+        
+        Btn.MouseButton1Click:Connect(function()
+            if config.Callback then
+                config.Callback()
+            end
+        end)
+    end
+    
+    function lib:CreateToggle(config)
+        local ToggleFrame = Instance.new("Frame")
+        ToggleFrame.Size = UDim2.new(1, 0, 0, 35)
+        ToggleFrame.BackgroundColor3 = SETTINGS.Colors.Section
+        ToggleFrame.Parent = Container
+        Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0, 6)
+        
+        local Title = Instance.new("TextLabel")
+        Title.Text = config.Name or "Toggle"
+        Title.Size = UDim2.new(0.7, 0, 1, 0)
+        Title.Position = UDim2.new(0, 10, 0, 0)
+        Title.BackgroundTransparency = 1
+        Title.TextColor3 = SETTINGS.Colors.Text
+        Title.Font = Enum.Font.GothamSemibold
+        Title.TextSize = 14
+        Title.TextXAlignment = Enum.TextXAlignment.Left
+        Title.Parent = ToggleFrame
+        
+        local Status = Instance.new("Frame")
+        Status.Size = UDim2.new(0, 20, 0, 20)
+        Status.Position = UDim2.new(1, -30, 0.5, -10)
+        Status.BackgroundColor3 = Color3.fromRGB(50,50,50)
+        Status.Parent = ToggleFrame
+        Instance.new("UICorner", Status).CornerRadius = UDim.new(0, 4)
+        
+        local Trigger = Instance.new("TextButton")
+        Trigger.Size = UDim2.new(1,0,1,0)
+        Trigger.BackgroundTransparency = 1
+        Trigger.Text = ""
+        Trigger.Parent = ToggleFrame
+        
+        local state = config.Default or false
+        if state then Status.BackgroundColor3 = SETTINGS.Colors.Accent end
+        
+        Trigger.MouseButton1Click:Connect(function()
+            state = not state
+            Status.BackgroundColor3 = state and SETTINGS.Colors.Accent or Color3.fromRGB(50,50,50)
+            if config.Callback then
+                config.Callback(state)
+            end
+        end)
+    end
+
+    return lib
+end
+
+return CoreLibrary
