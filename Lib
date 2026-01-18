@@ -1,4 +1,4 @@
---// Custom UI Library (Bacon-style window)
+--// Custom UI Library (FIXED)
 
 local Library = {}
 Library.Windows = {}
@@ -7,7 +7,6 @@ Library.MaxWindows = 5
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 
 local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 
@@ -18,7 +17,7 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 1000000
 ScreenGui.Parent = PlayerGui
 
--- Constants (Bacon-like)
+-- CONSTANTS
 local WINDOW_WIDTH = 135
 local WINDOW_HEIGHT = 200
 local MIN_HEIGHT = 28
@@ -26,7 +25,10 @@ local SPACING = 8
 local TOP_OFFSET = 15
 local TWEEN_TIME = 0.06
 
--- Position windows
+local TOPBAR_COLOR = Color3.fromRGB(130,130,130)
+local BODY_COLOR = Color3.fromRGB(163,163,163)
+
+-- Window positioning
 local function UpdatePositions()
 	for i, win in ipairs(Library.Windows) do
 		win.Main.Position = UDim2.new(
@@ -36,28 +38,29 @@ local function UpdatePositions()
 	end
 end
 
--- Drag system (NORMAL)
-local function EnableDrag(frame, bar)
+-- DRAG SYSTEM (НОРМАЛЬНЫЙ)
+local function MakeDraggable(frame, handle)
 	local dragging = false
-	local dragStart, startPos
+	local dragStart
+	local startPos
 
-	bar.InputBegan:Connect(function(input)
+	handle.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			dragging = true
 			dragStart = input.Position
 			startPos = frame.Position
+
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
 		end
 	end)
 
-	bar.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = false
-		end
-	end)
-
-	RunService.RenderStepped:Connect(function()
-		if dragging then
-			local delta = UserInputService:GetMouseLocation() - dragStart
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = input.Position - dragStart
 			frame.Position = UDim2.new(
 				startPos.X.Scale,
 				startPos.X.Offset + delta.X,
@@ -68,32 +71,31 @@ local function EnableDrag(frame, bar)
 	end)
 end
 
--- Create Window
+-- CREATE WINDOW
 function Library:CreateWindow(config)
 	if #Library.Windows >= Library.MaxWindows then return end
 	config = config or {}
 
 	local Name = config.Name or "Window"
-	local Color = config.Color or Color3.fromRGB(30, 30, 30)
 	local Font = config.Font or Enum.Font.Legacy
 
-	-- Main
+	-- MAIN
 	local Main = Instance.new("Frame")
 	Main.Size = UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT)
-	Main.BackgroundColor3 = Color
+	Main.BackgroundColor3 = BODY_COLOR
 	Main.BorderSizePixel = 0
 	Main.ZIndex = 10
 	Main.Parent = ScreenGui
 
-	-- TopBar
+	-- TOPBAR
 	local TopBar = Instance.new("Frame")
 	TopBar.Size = UDim2.fromOffset(WINDOW_WIDTH, MIN_HEIGHT)
-	TopBar.BackgroundColor3 = Color3.fromRGB(25,25,25)
+	TopBar.BackgroundColor3 = TOPBAR_COLOR
 	TopBar.BorderSizePixel = 0
 	TopBar.ZIndex = 11
 	TopBar.Parent = Main
 
-	-- Title
+	-- TITLE
 	local Title = Instance.new("TextLabel")
 	Title.Size = UDim2.new(1, -24, 1, 0)
 	Title.Position = UDim2.fromOffset(6, 0)
@@ -103,23 +105,27 @@ function Library:CreateWindow(config)
 	Title.Font = Font
 	Title.TextScaled = true
 	Title.TextXAlignment = Enum.TextXAlignment.Left
+	Title.TextYAlignment = Enum.TextYAlignment.Center
 	Title.ZIndex = 12
 	Title.Parent = TopBar
 
-	-- Minimize
+	-- MINIMIZE (ДЛИННЫЙ МИНУС)
 	local Min = Instance.new("TextButton")
 	Min.Size = UDim2.fromOffset(18, 18)
 	Min.Position = UDim2.new(1, -20, 0.5, -9)
 	Min.BackgroundTransparency = 1
-	Min.Text = "-"
+	Min.Text = "–"
 	Min.TextColor3 = Color3.new(1,1,1)
 	Min.Font = Font
 	Min.TextScaled = true
 	Min.ZIndex = 12
 	Min.Parent = TopBar
 
-	-- Window object
-	local Window = {Main = Main, Minimized = false}
+	-- WINDOW OBJECT
+	local Window = {
+		Main = Main,
+		Minimized = false
+	}
 
 	function Window:Toggle()
 		Window.Minimized = not Window.Minimized
@@ -139,7 +145,7 @@ function Library:CreateWindow(config)
 		Window:Toggle()
 	end)
 
-	EnableDrag(Main, TopBar)
+	MakeDraggable(Main, TopBar)
 
 	table.insert(Library.Windows, Window)
 	UpdatePositions()
