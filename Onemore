@@ -1,25 +1,18 @@
---[[ Simple Orion-like GUI Library (Window part) Author: ChatGPT Notes:
+--[[ FULL WORKING ROBLOX GUI LIBRARY (ORION-LIKE) PASTE THIS FILE AS-IS LOAD WITH loadstring(game:HttpGet(URL))() ]]
 
-Max 5 windows
+---------------- SERVICES ---------------- local Players = game:GetService("Players") local UserInputService = game:GetService("UserInputService")
 
-Each window offset to the right
+local LocalPlayer = Players.LocalPlayer
 
-Draggable
+---------------- SCREEN GUI ---------------- local ScreenGui = Instance.new("ScreenGui") ScreenGui.Name = "CustomUILibrary" ScreenGui.ResetOnSpawn = false ScreenGui.IgnoreGuiInset = true ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-Collapse/Expand button (+ / -) ]]
+---------------- LIBRARY ---------------- local Library = {} Library.Windows = {}
 
+---------------- CONFIG ---------------- local MAX_WINDOWS = 5 local WINDOW_WIDTH = 100 local WINDOW_HEIGHT = 25 local WINDOW_OFFSET_X = 110
 
-local Library = {}
+---------------- DRAG FUNCTION ---------------- local function MakeDraggable(frame, handle) local dragging = false local dragStart local startPos
 
--- CONFIG local MAX_WINDOWS = 5 local WINDOW_WIDTH = 100 local WINDOW_HEIGHT = 25 local WINDOW_OFFSET_X = 110
-
--- SERVICES local UIS = game:GetService("UserInputService") local Players = game:GetService("Players") local LocalPlayer = Players.LocalPlayer
-
--- STATE Library.Windows = {}
-
--- DRAG FUNCTION local function makeDraggable(frame, dragHandle) local dragging = false local dragStart, startPos
-
-dragHandle.InputBegan:Connect(function(input)
+handle.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
@@ -27,7 +20,7 @@ dragHandle.InputBegan:Connect(function(input)
     end
 end)
 
-UIS.InputChanged:Connect(function(input)
+UserInputService.InputChanged:Connect(function(input)
     if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
         local delta = input.Position - dragStart
         frame.Position = UDim2.new(
@@ -39,7 +32,7 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
-UIS.InputEnded:Connect(function(input)
+UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = false
     end
@@ -47,77 +40,76 @@ end)
 
 end
 
--- CREATE WINDOW function Library:CreateWindow(title) if #Library.Windows >= MAX_WINDOWS then warn("Maximum windows limit reached (5)") return nil end
+---------------- CREATE WINDOW ---------------- function Library:CreateWindow(options) if #Library.Windows >= MAX_WINDOWS then warn("MAX WINDOWS LIMIT (5)") return nil end
 
--- ScreenGui
-local gui = Instance.new("ScreenGui")
-gui.Name = "CustomUILibrary"
-gui.ResetOnSpawn = false
-gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+options = options or {}
+local TitleText = options.Title or "Window"
+local TitleFont = options.Font or Enum.Font.Gotham
 
--- Main Frame
-local window = Instance.new("Frame")
-window.Size = UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT)
-window.Position = UDim2.fromOffset(#Library.Windows * WINDOW_OFFSET_X + 20, 100)
-window.BackgroundColor3 = Color3.fromRGB(25, 25, 25) -- very dark gray
-window.BorderSizePixel = 0
-window.Parent = gui
+---------------- MAIN FRAME ----------------
+local Window = Instance.new("Frame")
+Window.Size = UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT)
+Window.Position = UDim2.fromOffset(#Library.Windows * WINDOW_OFFSET_X + 20, 100)
+Window.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Window.BorderSizePixel = 0
+Window.Parent = ScreenGui
 
--- Top Bar
-local topBar = Instance.new("TextButton")
-topBar.Size = UDim2.fromScale(1, 1)
-topBar.BackgroundTransparency = 1
-topBar.Text = ""
-topBar.Parent = window
+---------------- TOP BAR ----------------
+local TopBar = Instance.new("TextButton")
+TopBar.Size = UDim2.fromScale(1, 1)
+TopBar.BackgroundTransparency = 1
+TopBar.Text = ""
+TopBar.Parent = Window
 
--- Title
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -20, 1, 0)
-titleLabel.Position = UDim2.fromOffset(20, 0)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = title or "Window"
-titleLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.TextYAlignment = Enum.TextYAlignment.Center
-titleLabel.Font = Enum.Font.Gotham
-titleLabel.TextSize = 12
-titleLabel.Parent = window
+---------------- TOGGLE BUTTON ----------------
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.fromOffset(20, 20)
+ToggleButton.Position = UDim2.fromOffset(0, 2)
+ToggleButton.BackgroundTransparency = 1
+ToggleButton.Text = "+"
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.TextSize = 14
+ToggleButton.TextColor3 = Color3.fromRGB(220, 220, 220)
+ToggleButton.Parent = Window
 
--- Collapse Button
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.fromOffset(20, 20)
-toggleBtn.Position = UDim2.fromOffset(0, 2)
-toggleBtn.BackgroundTransparency = 1
-toggleBtn.Text = "+"
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.TextSize = 14
-toggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-toggleBtn.Parent = window
+---------------- TITLE ----------------
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -20, 1, 0)
+Title.Position = UDim2.fromOffset(20, 0)
+Title.BackgroundTransparency = 1
+Title.Text = TitleText
+Title.Font = TitleFont
+Title.TextSize = 12
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.TextYAlignment = Enum.TextYAlignment.Center
+Title.TextColor3 = Color3.fromRGB(230, 230, 230)
+Title.Parent = Window
 
--- Content Frame (future sections/buttons)
-local content = Instance.new("Frame")
-content.Position = UDim2.fromOffset(0, WINDOW_HEIGHT)
-content.Size = UDim2.fromOffset(WINDOW_WIDTH, 0)
-content.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-content.BorderSizePixel = 0
-content.Visible = false
-content.Parent = window
+---------------- CONTENT ----------------
+local Content = Instance.new("Frame")
+Content.Position = UDim2.fromOffset(0, WINDOW_HEIGHT)
+Content.Size = UDim2.fromOffset(WINDOW_WIDTH, 0)
+Content.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+Content.BorderSizePixel = 0
+Content.Visible = false
+Content.Parent = Window
 
--- STATE
-local opened = false
+---------------- TOGGLE LOGIC ----------------
+local Opened = false
 
-toggleBtn.MouseButton1Click:Connect(function()
-    opened = not opened
-    toggleBtn.Text = opened and "-" or "+"
-    content.Visible = opened
+ToggleButton.MouseButton1Click:Connect(function()
+    Opened = not Opened
+    ToggleButton.Text = Opened and "-" or "+"
+    Content.Visible = Opened
 end)
 
-makeDraggable(window, topBar)
+---------------- DRAG ----------------
+MakeDraggable(Window, TopBar)
 
--- Window Object
+---------------- WINDOW OBJECT ----------------
 local WindowObject = {}
-WindowObject.Frame = window
-WindowObject.Content = content
+WindowObject.Frame = Window
+WindowObject.Content = Content
 
 table.insert(Library.Windows, WindowObject)
 
@@ -125,4 +117,4 @@ return WindowObject
 
 end
 
-return Library
+---------------- RETURN ---------------- return Library
