@@ -1,31 +1,53 @@
+-- Создание библиотеки
 local Library = {}
-Library.__index = Library
+Library.windows = {}
 
-local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+-- Функция для создания окна
+function Library:CreateWindow(settings)
+    -- Проверяем, можем ли создать еще окно
+    if #self.windows >= 5 then
+        warn("Достигнут лимит на количество окон (5).")
+        return
+    end
 
--- GUI контейнер
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "UILibrary"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = PlayerGui
+    -- Создаем GUI
+    local Window = Instance.new("ScreenGui")
+    Window.Name = settings.Name
+    Window.DisplayOrder = 100  -- Окно будет поверх других GUI-элементов
+    Window.ResetOnSpawn = false
+    Window.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
-Library.WindowCount = 0
-Library.MaxWindows = 5
+    -- Создаем рамку для окна
+    local Frame = Instance.new("Frame")
+    Frame.Name = "WindowFrame"
+    Frame.Size = UDim2.new(0, 130, 0, 30)  -- Размер окна 130x30
+    Frame.Position = UDim2.new(0, 0, 0, 0)  -- Позиция в левом верхнем углу
+    Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Frame.Parent = Window
 
--- 🔥 нормальный драггинг
-local function MakeDraggable(frame)
+    -- Добавляем текст с именем окна
+    local Title = Instance.new("TextLabel")
+    Title.Text = settings.Name
+    Title.Size = UDim2.new(1, 0, 1, 0)
+    Title.BackgroundTransparency = 1
+    Title.TextColor3 = Color3.fromRGB(0, 0, 0)
+    Title.TextSize = 14
+    Title.Parent = Frame
+
+    -- Перетаскивание окна
     local dragging = false
-    local dragStart, startPos
+    local dragInput, dragStart, startPos
 
-    frame.InputBegan:Connect(function(input)
+    local function update(input)
+        local delta = input.Position - dragStart
+        Window.Position = UDim2.new(0, startPos.X + delta.X, 0, startPos.Y + delta.Y)
+    end
+
+    Frame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
             dragStart = input.Position
-            startPos = frame.Position
-
+            startPos = Window.Position
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
@@ -34,61 +56,17 @@ local function MakeDraggable(frame)
         end
     end)
 
-    UIS.InputChanged:Connect(function(input)
+    Frame.InputChanged:Connect(function(input)
         if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
+            update(input)
         end
     end)
-end
 
--- 🪟 Создание окна
-function Library:CreateWindow(opts)
-    if self.WindowCount >= self.MaxWindows then
-        warn("Max windows reached (5)")
-        return
-    end
-
-    self.WindowCount += 1
-
-    local name = (opts and opts.Name) or "Window"
-
-    -- каждое следующее окно правее
-    local offsetX = 10 + ((self.WindowCount - 1) * 410)
-
-    local Main = Instance.new("Frame")
-    Main.Size = UDim2.new(0, 40, 0, 10) -- ✅ 400x100 пикселей
-    Main.Position = UDim2.new(0, offsetX, 0, 10) -- ✅ слева сверху
-    Main.BackgroundColor3 = Color3.fromRGB(45,45,45) -- ✅ темнее
-    Main.BorderSizePixel = 0
-    Main.Parent = ScreenGui
-    Main.Name = name
-
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 6)
-    UICorner.Parent = Main
-
-    -- Заголовок (он же зона для перетаскивания)
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, 0, 0, 26)
-    Title.BackgroundTransparency = 1
-    Title.Text = name
-    Title.Font = Enum.Font.GothamBold
-    Title.TextSize = 14
-    Title.TextColor3 = Color3.fromRGB(255,255,255)
-    Title.Parent = Main
-
-    MakeDraggable(Main) -- можно тянуть за всё окно
-
-    local Window = {}
-    Window.Instance = Main
+    -- Добавляем окно в список окон библиотеки
+    table.insert(self.windows, Window)
 
     return Window
 end
 
+-- Возвращаем библиотеку
 return Library
