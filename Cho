@@ -62,7 +62,7 @@ function Library:CreateWindow(opts)
     local offsetX = 10 + ((self.WindowCount - 1) * 410)
 
     local Main = Instance.new("Frame")
-    Main.Size = UDim2.new(0, 400, 0, 100) -- ✅ 400x100 пикселей
+    Main.Size = UDim2.new(0, 40, 0, 10) -- ✅ 400x100 пикселей
     Main.Position = UDim2.new(0, offsetX, 0, 10) -- ✅ слева сверху
     Main.BackgroundColor3 = Color3.fromRGB(45,45,45) -- ✅ темнее
     Main.BorderSizePixel = 0
