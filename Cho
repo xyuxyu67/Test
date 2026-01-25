@@ -1,34 +1,30 @@
 local Library = {}
 Library.__index = Library
 
-local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- контейнер под все окна
+-- GUI контейнер
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "CustomUILibrary"
+ScreenGui.Name = "UILibrary"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
--- настройки
 Library.WindowCount = 0
 Library.MaxWindows = 5
-Library.Windows = {}
 
--- функция драггинга
-local function MakeDraggable(frame, dragHandle)
-    dragHandle = dragHandle or frame
-
+-- 🔥 нормальный драггинг
+local function MakeDraggable(frame)
     local dragging = false
-    local dragInput, mousePos, framePos
+    local dragStart, startPos
 
-    dragHandle.InputBegan:Connect(function(input)
+    frame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
-            mousePos = input.Position
-            framePos = frame.Position
+            dragStart = input.Position
+            startPos = frame.Position
 
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
@@ -38,67 +34,59 @@ local function MakeDraggable(frame, dragHandle)
         end
     end)
 
-    dragHandle.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
-
     UIS.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - mousePos
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
             frame.Position = UDim2.new(
-                framePos.X.Scale,
-                framePos.X.Offset + delta.X,
-                framePos.Y.Scale,
-                framePos.Y.Offset + delta.Y
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
             )
         end
     end)
 end
 
--- создание окна
-function Library:CreateWindow(options)
-    if Library.WindowCount >= Library.MaxWindows then
-        warn("Max window limit reached (5)")
+-- 🪟 Создание окна
+function Library:CreateWindow(opts)
+    if self.WindowCount >= self.MaxWindows then
+        warn("Max windows reached (5)")
         return
     end
 
-    Library.WindowCount += 1
+    self.WindowCount += 1
 
-    local windowName = options.Name or "Window"
+    local name = (opts and opts.Name) or "Window"
 
-    -- позиция правее предыдущего
-    local startX = 50 + ((Library.WindowCount - 1) * 420)
+    -- каждое следующее окно правее
+    local offsetX = 10 + ((self.WindowCount - 1) * 410)
 
     local Main = Instance.new("Frame")
-    Main.Size = UDim2.new(0, 400, 0, 120)
-    Main.Position = UDim2.new(0, startX, 0, 100)
-    Main.BackgroundColor3 = Color3.fromRGB(74,74,74)
+    Main.Size = UDim2.new(0, 400, 0, 100) -- ✅ 400x100 пикселей
+    Main.Position = UDim2.new(0, offsetX, 0, 10) -- ✅ слева сверху
+    Main.BackgroundColor3 = Color3.fromRGB(45,45,45) -- ✅ темнее
     Main.BorderSizePixel = 0
     Main.Parent = ScreenGui
-    Main.Name = windowName
+    Main.Name = name
 
-    local UICorner = Instance.new("UICorner", Main)
+    local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0, 6)
+    UICorner.Parent = Main
 
-    -- заголовок
+    -- Заголовок (он же зона для перетаскивания)
     local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, 0, 0, 28)
+    Title.Size = UDim2.new(1, 0, 0, 26)
     Title.BackgroundTransparency = 1
-    Title.Text = windowName
+    Title.Text = name
     Title.Font = Enum.Font.GothamBold
     Title.TextSize = 14
     Title.TextColor3 = Color3.fromRGB(255,255,255)
     Title.Parent = Main
 
-    -- делаем окно перетаскиваемым
-    MakeDraggable(Main, Title)
+    MakeDraggable(Main) -- можно тянуть за всё окно
 
     local Window = {}
     Window.Instance = Main
-
-    table.insert(Library.Windows, Window)
 
     return Window
 end
