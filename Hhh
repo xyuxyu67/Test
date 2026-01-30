@@ -1,0 +1,174 @@
+local UIS = game:GetService("UserInputService")
+
+local Library = {}
+Library.__index = Library
+
+-- =========================
+-- UTILS
+-- =========================
+
+local function roundify(obj, radius)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, radius)
+	c.Parent = obj
+end
+
+local function makeDraggable(frame, handle)
+	handle = handle or frame
+	local dragging, dragInput, startPos, startFramePos
+
+	handle.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			startPos = input.Position
+			startFramePos = frame.Position
+
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+
+	handle.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			dragInput = input
+		end
+	end)
+
+	UIS.InputChanged:Connect(function(input)
+		if input == dragInput and dragging then
+			local delta = input.Position - startPos
+			frame.Position = UDim2.new(
+				startFramePos.X.Scale,
+				startFramePos.X.Offset + delta.X,
+				startFramePos.Y.Scale,
+				startFramePos.Y.Offset + delta.Y
+			)
+		end
+	end)
+end
+
+-- =========================
+-- WINDOW
+-- =========================
+
+function Library:CreateWindow(title)
+	local Window = {}
+	Window.Sections = {}
+
+	-- GUI
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "UILibrary"
+	gui.ResetOnSpawn = false
+	gui.Parent = game.Players.LocalPlayer.PlayerGui
+
+	-- Main Frame
+	local main = Instance.new("Frame")
+	main.Size = UDim2.fromOffset(520, 350)
+	main.Position = UDim2.fromScale(0.5, 0.5)
+	main.AnchorPoint = Vector2.new(0.5, 0.5)
+	main.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+	main.Parent = gui
+	roundify(main, 10)
+
+	-- Top Bar
+	local top = Instance.new("Frame")
+	top.Size = UDim2.new(1, 0, 0, 32)
+	top.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+	top.Parent = main
+	roundify(top, 10)
+
+	-- Title
+	local titleLabel = Instance.new("TextLabel")
+	titleLabel.Text = title or "Window"
+	titleLabel.Font = Enum.Font.GothamMedium
+	titleLabel.TextSize = 14
+	titleLabel.TextColor3 = Color3.fromRGB(220,220,220)
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Size = UDim2.new(1, -70, 1, 0)
+	titleLabel.Position = UDim2.new(0, 10, 0, 0)
+	titleLabel.TextXAlignment = Left
+	titleLabel.Parent = top
+
+	-- Close Button
+	local close = Instance.new("TextButton")
+	close.Text = "X"
+	close.Font = Enum.Font.GothamBold
+	close.TextSize = 14
+	close.TextColor3 = Color3.fromRGB(200,200,200)
+	close.BackgroundTransparency = 1
+	close.Size = UDim2.fromOffset(24, 24)
+	close.Position = UDim2.new(1, -28, 0, 4)
+	close.Parent = top
+
+	-- Collapse Button
+	local collapse = Instance.new("TextButton")
+	collapse.Text = "^"
+	collapse.Font = Enum.Font.GothamBold
+	collapse.TextSize = 14
+	collapse.TextColor3 = Color3.fromRGB(200,200,200)
+	collapse.BackgroundTransparency = 1
+	collapse.Size = UDim2.fromOffset(24, 24)
+	collapse.Position = UDim2.new(1, -56, 0, 4)
+	collapse.Parent = top
+
+	-- Sections Holder
+	local sections = Instance.new("Frame")
+	sections.Size = UDim2.new(0, 140, 1, -32)
+	sections.Position = UDim2.new(0, 0, 0, 32)
+	sections.BackgroundTransparency = 1
+	sections.Parent = main
+
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 6)
+	layout.HorizontalAlignment = Center
+	layout.VerticalAlignment = Top
+	layout.Parent = sections
+
+	local padding = Instance.new("UIPadding")
+	padding.PaddingTop = UDim.new(0, 8)
+	padding.Parent = sections
+
+	-- Drag
+	makeDraggable(main, top)
+
+	-- Close logic
+	close.MouseButton1Click:Connect(function()
+		gui:Destroy()
+	end)
+
+	-- Collapse logic
+	local collapsed = false
+	collapse.MouseButton1Click:Connect(function()
+		collapsed = not collapsed
+		collapse.Text = collapsed and "v" or "^"
+		sections.Visible = not collapsed
+		main.Size = collapsed and UDim2.fromOffset(520, 32) or UDim2.fromOffset(520, 350)
+	end)
+
+	-- =========================
+	-- CREATE SECTION
+	-- =========================
+
+	function Window:CreateSection(name)
+		local section = Instance.new("TextButton")
+		section.Size = UDim2.fromOffset(120, 26)
+		section.BackgroundColor3 = Color3.fromRGB(48,48,48)
+		section.Text = name or "Section"
+		section.Font = Enum.Font.Gotham
+		section.TextSize = 12
+		section.TextColor3 = Color3.fromRGB(220,220,220)
+		section.AutoButtonColor = false
+		section.Parent = sections
+		roundify(section, 6)
+
+		table.insert(Window.Sections, section)
+		return section
+	end
+
+	return Window
+end
+
+return Library
