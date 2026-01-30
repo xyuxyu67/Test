@@ -1,27 +1,32 @@
-local UIS = game:GetService("UserInputService")
+-- =========================
+-- SIMPLE UI LIBRARY
+-- =========================
 
-local Library = {}
-Library.__index = Library
+local UIS = game:GetService("UserInputService")
+local Player = game.Players.LocalPlayer
 
 -- =========================
 -- UTILS
 -- =========================
 
-local function roundify(obj, radius)
+local function roundify(obj, r)
 	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, radius)
+	c.CornerRadius = UDim.new(0, r)
 	c.Parent = obj
 end
 
 local function makeDraggable(frame, handle)
-	handle = handle or frame
-	local dragging, dragInput, startPos, startFramePos
+	handle.Active = true
+	handle.Selectable = true
+
+	local dragging = false
+	local dragStart, startPos
 
 	handle.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			dragging = true
-			startPos = input.Position
-			startFramePos = frame.Position
+			dragStart = input.Position
+			startPos = frame.Position
 
 			input.Changed:Connect(function()
 				if input.UserInputState == Enum.UserInputState.End then
@@ -31,144 +36,148 @@ local function makeDraggable(frame, handle)
 		end
 	end)
 
-	handle.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			dragInput = input
-		end
-	end)
-
 	UIS.InputChanged:Connect(function(input)
-		if input == dragInput and dragging then
-			local delta = input.Position - startPos
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = input.Position - dragStart
 			frame.Position = UDim2.new(
-				startFramePos.X.Scale,
-				startFramePos.X.Offset + delta.X,
-				startFramePos.Y.Scale,
-				startFramePos.Y.Offset + delta.Y
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
 			)
 		end
 	end)
 end
 
 -- =========================
--- WINDOW
+-- GUI
 -- =========================
 
-function Library:CreateWindow(title)
-	local Window = {}
-	Window.Sections = {}
+local gui = Instance.new("ScreenGui")
+gui.Name = "CustomUILibrary"
+gui.ResetOnSpawn = false
+gui.Parent = Player:WaitForChild("PlayerGui")
 
-	-- GUI
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "UILibrary"
-	gui.ResetOnSpawn = false
-	gui.Parent = game.Players.LocalPlayer.PlayerGui
+local main = Instance.new("Frame")
+main.Size = UDim2.fromOffset(520, 360)
+main.Position = UDim2.fromScale(0.5, 0.5)
+main.AnchorPoint = Vector2.new(0.5, 0.5)
+main.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+main.Parent = gui
+roundify(main, 10)
 
-	-- Main Frame
-	local main = Instance.new("Frame")
-	main.Size = UDim2.fromOffset(520, 350)
-	main.Position = UDim2.fromScale(0.5, 0.5)
-	main.AnchorPoint = Vector2.new(0.5, 0.5)
-	main.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
-	main.Parent = gui
-	roundify(main, 10)
+-- =========================
+-- TOP BAR
+-- =========================
 
-	-- Top Bar
-	local top = Instance.new("Frame")
-	top.Size = UDim2.new(1, 0, 0, 32)
-	top.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
-	top.Parent = main
-	roundify(top, 10)
+local top = Instance.new("Frame")
+top.Size = UDim2.new(1, 0, 0, 32)
+top.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+top.Parent = main
+roundify(top, 10)
 
-	-- Title
-	local titleLabel = Instance.new("TextLabel")
-	titleLabel.Text = title or "Window"
-	titleLabel.Font = Enum.Font.GothamMedium
-	titleLabel.TextSize = 14
-	titleLabel.TextColor3 = Color3.fromRGB(220,220,220)
-	titleLabel.BackgroundTransparency = 1
-	titleLabel.Size = UDim2.new(1, -70, 1, 0)
-	titleLabel.Position = UDim2.new(0, 10, 0, 0)
-	titleLabel.TextXAlignment = Left
-	titleLabel.Parent = top
+local title = Instance.new("TextLabel")
+title.Text = "My UI Library"
+title.Font = Enum.Font.GothamMedium
+title.TextSize = 14
+title.TextColor3 = Color3.fromRGB(230,230,230)
+title.BackgroundTransparency = 1
+title.Size = UDim2.new(1, -80, 1, 0)
+title.Position = UDim2.new(0, 10, 0, 0)
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = top
 
-	-- Close Button
-	local close = Instance.new("TextButton")
-	close.Text = "X"
-	close.Font = Enum.Font.GothamBold
-	close.TextSize = 14
-	close.TextColor3 = Color3.fromRGB(200,200,200)
-	close.BackgroundTransparency = 1
-	close.Size = UDim2.fromOffset(24, 24)
-	close.Position = UDim2.new(1, -28, 0, 4)
-	close.Parent = top
+local close = Instance.new("TextButton")
+close.Text = "X"
+close.Font = Enum.Font.GothamBold
+close.TextSize = 14
+close.TextColor3 = Color3.fromRGB(200,200,200)
+close.BackgroundTransparency = 1
+close.Size = UDim2.fromOffset(24,24)
+close.Position = UDim2.new(1, -28, 0, 4)
+close.Parent = top
 
-	-- Collapse Button
-	local collapse = Instance.new("TextButton")
-	collapse.Text = "^"
-	collapse.Font = Enum.Font.GothamBold
-	collapse.TextSize = 14
-	collapse.TextColor3 = Color3.fromRGB(200,200,200)
-	collapse.BackgroundTransparency = 1
-	collapse.Size = UDim2.fromOffset(24, 24)
-	collapse.Position = UDim2.new(1, -56, 0, 4)
-	collapse.Parent = top
+local collapse = Instance.new("TextButton")
+collapse.Text = "^"
+collapse.Font = Enum.Font.GothamBold
+collapse.TextSize = 14
+collapse.TextColor3 = Color3.fromRGB(200,200,200)
+collapse.BackgroundTransparency = 1
+collapse.Size = UDim2.fromOffset(24,24)
+collapse.Position = UDim2.new(1, -56, 0, 4)
+collapse.Parent = top
 
-	-- Sections Holder
-	local sections = Instance.new("Frame")
-	sections.Size = UDim2.new(0, 140, 1, -32)
-	sections.Position = UDim2.new(0, 0, 0, 32)
-	sections.BackgroundTransparency = 1
-	sections.Parent = main
+makeDraggable(main, top)
 
-	local layout = Instance.new("UIListLayout")
-	layout.Padding = UDim.new(0, 6)
-	layout.HorizontalAlignment = Center
-	layout.VerticalAlignment = Top
-	layout.Parent = sections
+close.MouseButton1Click:Connect(function()
+	gui:Destroy()
+end)
 
-	local padding = Instance.new("UIPadding")
-	padding.PaddingTop = UDim.new(0, 8)
-	padding.Parent = sections
+local collapsed = false
+collapse.MouseButton1Click:Connect(function()
+	collapsed = not collapsed
+	collapse.Text = collapsed and "v" or "^"
+end)
 
-	-- Drag
-	makeDraggable(main, top)
+-- =========================
+-- SECTIONS (LEFT)
+-- =========================
 
-	-- Close logic
-	close.MouseButton1Click:Connect(function()
-		gui:Destroy()
-	end)
+local sectionHolder = Instance.new("Frame")
+sectionHolder.Size = UDim2.new(0, 150, 1, -32)
+sectionHolder.Position = UDim2.new(0, 0, 0, 32)
+sectionHolder.BackgroundTransparency = 1
+sectionHolder.Parent = main
 
-	-- Collapse logic
-	local collapsed = false
-	collapse.MouseButton1Click:Connect(function()
-		collapsed = not collapsed
-		collapse.Text = collapsed and "v" or "^"
-		sections.Visible = not collapsed
-		main.Size = collapsed and UDim2.fromOffset(520, 32) or UDim2.fromOffset(520, 350)
-	end)
+local list = Instance.new("UIListLayout")
+list.Padding = UDim.new(0, 6)
+list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+list.Parent = sectionHolder
 
-	-- =========================
-	-- CREATE SECTION
-	-- =========================
+local pad = Instance.new("UIPadding")
+pad.PaddingTop = UDim.new(0, 8)
+pad.Parent = sectionHolder
 
-	function Window:CreateSection(name)
-		local section = Instance.new("TextButton")
-		section.Size = UDim2.fromOffset(120, 26)
-		section.BackgroundColor3 = Color3.fromRGB(48,48,48)
-		section.Text = name or "Section"
-		section.Font = Enum.Font.Gotham
-		section.TextSize = 12
-		section.TextColor3 = Color3.fromRGB(220,220,220)
-		section.AutoButtonColor = false
-		section.Parent = sections
-		roundify(section, 6)
+-- =========================
+-- API
+-- =========================
 
-		table.insert(Window.Sections, section)
-		return section
-	end
+local UI = {}
 
-	return Window
+function UI:SetTitle(text)
+	title.Text = text
 end
 
-return Library
+function UI:CreateSection(name)
+	local sec = Instance.new("TextButton")
+	sec.Size = UDim2.fromOffset(130, 26)
+	sec.BackgroundColor3 = Color3.fromRGB(48,48,48)
+	sec.Text = name or "Section"
+	sec.Font = Enum.Font.Gotham
+	sec.TextSize = 12
+	sec.TextColor3 = Color3.fromRGB(230,230,230)
+	sec.AutoButtonColor = false
+	sec.Parent = sectionHolder
+	roundify(sec, 6)
+
+	return sec
+end
+
+-- =========================
+-- COLLAPSE VISUAL
+-- =========================
+
+game:GetService("RunService").RenderStepped:Connect(function()
+	sectionHolder.Visible = not collapsed
+	main.Size = collapsed and UDim2.fromOffset(520, 32) or UDim2.fromOffset(520, 360)
+end)
+
+-- =========================
+-- DEMO (можешь удалить)
+-- =========================
+
+UI:SetTitle("Demo UI")
+
+for i = 1, 10 do
+	UI:CreateSection("Section "..i)
+end
