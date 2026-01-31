@@ -1,0 +1,1666 @@
+-- SimpleUILib (Orion-like minimal)
+-- Put this file on your UI LINK, load with:
+-- local SimpleUILib = loadstring(game:HttpGet("UI LINK"))()
+-- local Window = SimpleUILib:MakeWindow({Title="Title"})
+
+local SimpleUILib = {}
+
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local TextService = game:GetService("TextService")
+
+local LP = Players.LocalPlayer
+
+local function getParent()
+	local ok, cg = pcall(function() return game:GetService("CoreGui") end)
+	if ok and cg then return cg end
+	return LP:WaitForChild("PlayerGui")
+end
+
+local function clamp(v, a, b)
+	if v < a then return a end
+	if v > b then return b end
+	return v
+end
+
+local function roundStep(v, step)
+	step = step or 1
+	return math.floor((v / step) + 0.5) * step
+end
+
+--========================
+-- Visual constants
+--========================
+local FONT = Enum.Font.Gotham
+local WINDOW_W, WINDOW_H = 560, 350
+local TOP_H = 30
+local CORNER = 6
+
+local LEFT_W = 170
+local ITEM_H = 26
+local GAP = 8
+local CONTROL_CORNER = 4
+
+local DROPDOWN_GAP_Y = 4
+local DROPDOWN_MAX_VISIBLE = 5
+local DROPDOWN_BORDER = 1
+
+local KEYBIND_TEXT_TRANS = 0.45
+
+--========================
+-- Themes (20)
+-- Only colors change, no shapes/fonts.
+--========================
+local THEMES = {
+	Carbon = {
+		MainBg   = Color3.fromRGB(34, 34, 34),
+		TopBar   = Color3.fromRGB(24, 24, 24),
+		LeftBg   = Color3.fromRGB(28, 28, 28),
+		Text     = Color3.fromRGB(240, 240, 240),
+		DimText  = Color3.fromRGB(210, 210, 210),
+		BtnBg    = Color3.fromRGB(45, 45, 45),
+		BtnBg2   = Color3.fromRGB(52, 52, 52),
+		Stroke   = Color3.fromRGB(140, 140, 140),
+		Active   = Color3.fromRGB(65, 65, 65),
+	},
+	Light = {
+		MainBg   = Color3.fromRGB(245, 245, 245),
+		TopBar   = Color3.fromRGB(230, 230, 230),
+		LeftBg   = Color3.fromRGB(235, 235, 235),
+		Text     = Color3.fromRGB(25, 25, 25),
+		DimText  = Color3.fromRGB(70, 70, 70),
+		BtnBg    = Color3.fromRGB(220, 220, 220),
+		BtnBg2   = Color3.fromRGB(210, 210, 210),
+		Stroke   = Color3.fromRGB(120, 120, 120),
+		Active   = Color3.fromRGB(180, 200, 255),
+	},
+	Ocean = {
+		MainBg   = Color3.fromRGB(20, 28, 38),
+		TopBar   = Color3.fromRGB(16, 22, 30),
+		LeftBg   = Color3.fromRGB(18, 26, 36),
+		Text     = Color3.fromRGB(230, 245, 255),
+		DimText  = Color3.fromRGB(170, 210, 230),
+		BtnBg    = Color3.fromRGB(30, 44, 60),
+		BtnBg2   = Color3.fromRGB(36, 52, 72),
+		Stroke   = Color3.fromRGB(90, 140, 170),
+		Active   = Color3.fromRGB(45, 110, 140),
+	},
+	Forest = {
+		MainBg   = Color3.fromRGB(24, 34, 28),
+		TopBar   = Color3.fromRGB(18, 26, 20),
+		LeftBg   = Color3.fromRGB(22, 32, 24),
+		Text     = Color3.fromRGB(235, 245, 235),
+		DimText  = Color3.fromRGB(190, 220, 190),
+		BtnBg    = Color3.fromRGB(38, 54, 40),
+		BtnBg2   = Color3.fromRGB(44, 62, 46),
+		Stroke   = Color3.fromRGB(120, 150, 120),
+		Active   = Color3.fromRGB(60, 110, 70),
+	},
+	Rose = {
+		MainBg   = Color3.fromRGB(40, 28, 34),
+		TopBar   = Color3.fromRGB(32, 20, 26),
+		LeftBg   = Color3.fromRGB(36, 24, 30),
+		Text     = Color3.fromRGB(255, 240, 245),
+		DimText  = Color3.fromRGB(230, 190, 200),
+		BtnBg    = Color3.fromRGB(60, 36, 46),
+		BtnBg2   = Color3.fromRGB(72, 42, 54),
+		Stroke   = Color3.fromRGB(170, 110, 130),
+		Active   = Color3.fromRGB(150, 60, 90),
+	},
+	Violet = {
+		MainBg   = Color3.fromRGB(32, 28, 44),
+		TopBar   = Color3.fromRGB(24, 20, 34),
+		LeftBg   = Color3.fromRGB(28, 24, 40),
+		Text     = Color3.fromRGB(245, 240, 255),
+		DimText  = Color3.fromRGB(215, 205, 235),
+		BtnBg    = Color3.fromRGB(52, 44, 80),
+		BtnBg2   = Color3.fromRGB(60, 50, 92),
+		Stroke   = Color3.fromRGB(150, 130, 200),
+		Active   = Color3.fromRGB(110, 80, 180),
+	},
+	Amber = {
+		MainBg   = Color3.fromRGB(44, 34, 24),
+		TopBar   = Color3.fromRGB(34, 24, 16),
+		LeftBg   = Color3.fromRGB(40, 30, 20),
+		Text     = Color3.fromRGB(255, 245, 230),
+		DimText  = Color3.fromRGB(230, 210, 170),
+		BtnBg    = Color3.fromRGB(70, 52, 32),
+		BtnBg2   = Color3.fromRGB(82, 60, 36),
+		Stroke   = Color3.fromRGB(200, 160, 90),
+		Active   = Color3.fromRGB(200, 120, 40),
+	},
+	Nord = {
+		MainBg   = Color3.fromRGB(46, 52, 64),
+		TopBar   = Color3.fromRGB(59, 66, 82),
+		LeftBg   = Color3.fromRGB(53, 59, 74),
+		Text     = Color3.fromRGB(236, 239, 244),
+		DimText  = Color3.fromRGB(216, 222, 233),
+		BtnBg    = Color3.fromRGB(67, 76, 94),
+		BtnBg2   = Color3.fromRGB(76, 86, 106),
+		Stroke   = Color3.fromRGB(136, 192, 208),
+		Active   = Color3.fromRGB(129, 161, 193),
+	},
+	Neon = {
+		MainBg   = Color3.fromRGB(18, 18, 18),
+		TopBar   = Color3.fromRGB(10, 10, 10),
+		LeftBg   = Color3.fromRGB(14, 14, 14),
+		Text     = Color3.fromRGB(240, 240, 240),
+		DimText  = Color3.fromRGB(170, 170, 170),
+		BtnBg    = Color3.fromRGB(30, 30, 30),
+		BtnBg2   = Color3.fromRGB(40, 40, 40),
+		Stroke   = Color3.fromRGB(120, 120, 120),
+		Active   = Color3.fromRGB(0, 255, 160),
+	},
+	Mono = {
+		MainBg   = Color3.fromRGB(22, 22, 22),
+		TopBar   = Color3.fromRGB(16, 16, 16),
+		LeftBg   = Color3.fromRGB(19, 19, 19),
+		Text     = Color3.fromRGB(235, 235, 235),
+		DimText  = Color3.fromRGB(205, 205, 205),
+		BtnBg    = Color3.fromRGB(36, 36, 36),
+		BtnBg2   = Color3.fromRGB(48, 48, 48),
+		Stroke   = Color3.fromRGB(165, 165, 165),
+		Active   = Color3.fromRGB(90, 90, 90),
+	},
+
+	Sunset = {
+		MainBg   = Color3.fromRGB(44, 26, 24),
+		TopBar   = Color3.fromRGB(34, 18, 16),
+		LeftBg   = Color3.fromRGB(40, 22, 20),
+		Text     = Color3.fromRGB(255, 242, 235),
+		DimText  = Color3.fromRGB(235, 205, 195),
+		BtnBg    = Color3.fromRGB(66, 34, 30),
+		BtnBg2   = Color3.fromRGB(78, 38, 34),
+		Stroke   = Color3.fromRGB(220, 150, 120),
+		Active   = Color3.fromRGB(220, 110, 80),
+	},
+	Midnight = {
+		MainBg   = Color3.fromRGB(16, 18, 26),
+		TopBar   = Color3.fromRGB(12, 14, 20),
+		LeftBg   = Color3.fromRGB(14, 16, 24),
+		Text     = Color3.fromRGB(235, 240, 255),
+		DimText  = Color3.fromRGB(190, 200, 230),
+		BtnBg    = Color3.fromRGB(26, 30, 44),
+		BtnBg2   = Color3.fromRGB(32, 36, 52),
+		Stroke   = Color3.fromRGB(120, 140, 200),
+		Active   = Color3.fromRGB(80, 110, 200),
+	},
+	Mint = {
+		MainBg   = Color3.fromRGB(22, 36, 34),
+		TopBar   = Color3.fromRGB(16, 28, 26),
+		LeftBg   = Color3.fromRGB(20, 32, 30),
+		Text     = Color3.fromRGB(235, 255, 250),
+		DimText  = Color3.fromRGB(190, 235, 225),
+		BtnBg    = Color3.fromRGB(34, 56, 52),
+		BtnBg2   = Color3.fromRGB(40, 64, 60),
+		Stroke   = Color3.fromRGB(120, 220, 200),
+		Active   = Color3.fromRGB(60, 180, 150),
+	},
+	Cherry = {
+		MainBg   = Color3.fromRGB(38, 18, 26),
+		TopBar   = Color3.fromRGB(28, 12, 18),
+		LeftBg   = Color3.fromRGB(34, 16, 22),
+		Text     = Color3.fromRGB(255, 235, 242),
+		DimText  = Color3.fromRGB(235, 190, 210),
+		BtnBg    = Color3.fromRGB(60, 26, 40),
+		BtnBg2   = Color3.fromRGB(72, 30, 48),
+		Stroke   = Color3.fromRGB(230, 120, 160),
+		Active   = Color3.fromRGB(200, 60, 120),
+	},
+	Sand = {
+		MainBg   = Color3.fromRGB(46, 42, 34),
+		TopBar   = Color3.fromRGB(36, 32, 26),
+		LeftBg   = Color3.fromRGB(42, 38, 30),
+		Text     = Color3.fromRGB(255, 250, 235),
+		DimText  = Color3.fromRGB(235, 225, 190),
+		BtnBg    = Color3.fromRGB(70, 64, 50),
+		BtnBg2   = Color3.fromRGB(82, 74, 58),
+		Stroke   = Color3.fromRGB(210, 190, 140),
+		Active   = Color3.fromRGB(190, 160, 90),
+	},
+	Ice = {
+		MainBg   = Color3.fromRGB(22, 28, 34),
+		TopBar   = Color3.fromRGB(16, 20, 26),
+		LeftBg   = Color3.fromRGB(20, 24, 30),
+		Text     = Color3.fromRGB(235, 248, 255),
+		DimText  = Color3.fromRGB(200, 235, 245),
+		BtnBg    = Color3.fromRGB(34, 44, 54),
+		BtnBg2   = Color3.fromRGB(40, 52, 64),
+		Stroke   = Color3.fromRGB(150, 210, 230),
+		Active   = Color3.fromRGB(90, 170, 200),
+	},
+	Cyber = {
+		MainBg   = Color3.fromRGB(18, 16, 22),
+		TopBar   = Color3.fromRGB(12, 10, 14),
+		LeftBg   = Color3.fromRGB(16, 14, 18),
+		Text     = Color3.fromRGB(245, 240, 255),
+		DimText  = Color3.fromRGB(200, 190, 230),
+		BtnBg    = Color3.fromRGB(34, 28, 44),
+		BtnBg2   = Color3.fromRGB(42, 34, 56),
+		Stroke   = Color3.fromRGB(170, 120, 255),
+		Active   = Color3.fromRGB(0, 255, 200),
+	},
+	Coffee = {
+		MainBg   = Color3.fromRGB(36, 28, 24),
+		TopBar   = Color3.fromRGB(26, 20, 16),
+		LeftBg   = Color3.fromRGB(32, 24, 20),
+		Text     = Color3.fromRGB(255, 245, 235),
+		DimText  = Color3.fromRGB(230, 210, 190),
+		BtnBg    = Color3.fromRGB(56, 42, 34),
+		BtnBg2   = Color3.fromRGB(66, 50, 40),
+		Stroke   = Color3.fromRGB(200, 170, 140),
+		Active   = Color3.fromRGB(180, 120, 70),
+	},
+	Lime = {
+		MainBg   = Color3.fromRGB(24, 34, 20),
+		TopBar   = Color3.fromRGB(16, 24, 14),
+		LeftBg   = Color3.fromRGB(20, 30, 18),
+		Text     = Color3.fromRGB(245, 255, 235),
+		DimText  = Color3.fromRGB(210, 240, 190),
+		BtnBg    = Color3.fromRGB(38, 56, 30),
+		BtnBg2   = Color3.fromRGB(46, 66, 34),
+		Stroke   = Color3.fromRGB(170, 230, 110),
+		Active   = Color3.fromRGB(120, 220, 60),
+	},
+	Slate = {
+		MainBg   = Color3.fromRGB(30, 34, 38),
+		TopBar   = Color3.fromRGB(22, 26, 30),
+		LeftBg   = Color3.fromRGB(26, 30, 34),
+		Text     = Color3.fromRGB(240, 245, 250),
+		DimText  = Color3.fromRGB(205, 220, 235),
+		BtnBg    = Color3.fromRGB(44, 50, 56),
+		BtnBg2   = Color3.fromRGB(52, 60, 66),
+		Stroke   = Color3.fromRGB(160, 180, 200),
+		Active   = Color3.fromRGB(90, 140, 180),
+	},
+}
+
+local THEME_NAMES = {
+	"Carbon","Light","Ocean","Forest","Rose","Violet","Amber","Nord","Neon","Mono",
+	"Sunset","Midnight","Mint","Cherry","Sand","Ice","Cyber","Coffee","Lime","Slate"
+}
+
+function SimpleUILib:GetThemeNames()
+	local out = {}
+	for i=1,#THEME_NAMES do out[i]=THEME_NAMES[i] end
+	return out
+end
+
+--========================
+-- Theme binding helper
+--========================
+local function ThemeBinder()
+	local self = {
+		current = THEMES.Carbon,
+		name = "Carbon",
+		binds = {},
+		refreshers = {},
+	}
+
+	function self:Bind(obj, prop, key)
+		table.insert(self.binds, {o=obj, p=prop, k=key})
+		obj[prop] = self.current[key]
+	end
+
+	function self:AddRefresher(fn)
+		table.insert(self.refreshers, fn)
+	end
+
+	function self:SetTheme(name)
+		if not THEMES[name] then return end
+		self.name = name
+		self.current = THEMES[name]
+
+		for i = #self.binds, 1, -1 do
+			local b = self.binds[i]
+			if not b.o or b.o.Parent == nil then
+				table.remove(self.binds, i)
+			else
+				local v = self.current[b.k]
+				if v ~= nil then
+					pcall(function() b.o[b.p] = v end)
+				end
+			end
+		end
+
+		for _, fn in ipairs(self.refreshers) do
+			pcall(fn)
+		end
+	end
+
+	return self
+end
+
+local function addCorner(obj, px)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, px or CONTROL_CORNER)
+	c.Parent = obj
+	return c
+end
+
+local function addPadding(parent, l, r, t, b)
+	local p = Instance.new("UIPadding")
+	p.PaddingLeft = UDim.new(0, l or 0)
+	p.PaddingRight = UDim.new(0, r or 0)
+	p.PaddingTop = UDim.new(0, t or 0)
+	p.PaddingBottom = UDim.new(0, b or 0)
+	p.Parent = parent
+	return p
+end
+
+local function makeListLayout(parent, padding)
+	local ll = Instance.new("UIListLayout")
+	ll.SortOrder = Enum.SortOrder.LayoutOrder
+	ll.Padding = UDim.new(0, padding or 0)
+	ll.Parent = parent
+	return ll
+end
+
+local function enableAutoCanvas(sf)
+	pcall(function()
+		sf.AutomaticCanvasSize = Enum.AutomaticSize.Y
+		sf.CanvasSize = UDim2.new(0,0,0,0)
+	end)
+end
+
+--========================
+-- Keybind manager (per window)
+--========================
+local function KeybindManager()
+	local self = { map = {} }
+
+	local function toKeyCode(s)
+		if not s or s == "" then return nil end
+		if #s == 1 then s = string.upper(s) end
+		return Enum.KeyCode[s] or Enum.KeyCode[string.upper(s)]
+	end
+
+	function self:Bind(keyStr, callback)
+		if type(callback) ~= "function" then return end
+		local kc = toKeyCode(keyStr)
+		if not kc then return end
+		self.map[kc] = self.map[kc] or {}
+		table.insert(self.map[kc], callback)
+	end
+
+	UIS.InputBegan:Connect(function(input, processed)
+		if processed then return end
+		if UIS:GetFocusedTextBox() then return end
+		local arr = self.map[input.KeyCode]
+		if arr then
+			for _, cb in ipairs(arr) do
+				pcall(cb)
+			end
+		end
+	end)
+
+	return self
+end
+
+--========================
+-- Dropdown manager (global per window)
+--========================
+local function DropdownManager(overlayLayer)
+	local self = {
+		open = nil,
+		followConn = nil,
+	}
+
+	function self:Close()
+		if self.open then
+			if self.open.setArrow then pcall(self.open.setArrow, false) end
+			if self.open.menu and self.open.menu.Parent then self.open.menu:Destroy() end
+			if self.open.blocker and self.open.blocker.Parent then self.open.blocker:Destroy() end
+			self.open = nil
+		end
+		if self.followConn then
+			self.followConn:Disconnect()
+			self.followConn = nil
+		end
+	end
+
+	function self:Open(btn, options, selected, onPick, theme, binder)
+		self:Close()
+
+		local blocker = Instance.new("TextButton")
+		blocker.BackgroundTransparency = 1
+		blocker.BorderSizePixel = 0
+		blocker.Text = ""
+		blocker.AutoButtonColor = false
+		blocker.Size = UDim2.new(1,0,1,0)
+		blocker.Position = UDim2.new(0,0,0,0)
+		blocker.ZIndex = 600
+		blocker.Parent = overlayLayer
+
+		local function compute()
+			local base = overlayLayer.AbsolutePosition
+			local scr = overlayLayer.AbsoluteSize
+
+			local a = btn.AbsolutePosition
+			local s = btn.AbsoluteSize
+
+			local relX = a.X - base.X
+			local relY = a.Y - base.Y
+
+			local menuW = s.X -- 1:1 with button width
+			local x = relX
+			local y = relY + s.Y + DROPDOWN_GAP_Y
+
+			local availableBelow = (scr.Y - 4) - y
+			local maxFit = math.floor((availableBelow - (DROPDOWN_BORDER*2)) / ITEM_H)
+			maxFit = clamp(maxFit, 1, DROPDOWN_MAX_VISIBLE)
+
+			local count = #options
+			local slots = math.min(count, DROPDOWN_MAX_VISIBLE, maxFit)
+			local showHalf = (count > slots) and (slots >= 2)
+			local viewportH = (showHalf and ((slots - 0.5) * ITEM_H) or (slots * ITEM_H))
+			local menuH = viewportH + (DROPDOWN_BORDER*2)
+
+			-- clamp X
+			if x + menuW > scr.X - 4 then x = scr.X - menuW - 4 end
+			if x < 4 then x = 4 end
+
+			-- clamp Y
+			if y + menuH > scr.Y - 4 then y = scr.Y - menuH - 4 end
+			if y < 4 then y = 4 end
+
+			return x, y, menuW, menuH, viewportH
+		end
+
+		local x, y, menuW, menuH = compute()
+
+		local outer = Instance.new("Frame")
+		outer.BorderSizePixel = 0
+		outer.ClipsDescendants = true
+		outer.Size = UDim2.fromOffset(menuW, menuH)
+		outer.Position = UDim2.fromOffset(x, y)
+		outer.ZIndex = 601
+		outer.Parent = overlayLayer
+		addCorner(outer, CONTROL_CORNER)
+		outer.BackgroundColor3 = theme.Stroke
+
+		local list = Instance.new("ScrollingFrame")
+		list.BorderSizePixel = 0
+		list.Position = UDim2.fromOffset(DROPDOWN_BORDER, DROPDOWN_BORDER)
+		list.Size = UDim2.new(1, -(DROPDOWN_BORDER*2), 1, -(DROPDOWN_BORDER*2))
+		list.ZIndex = 602
+		list.ClipsDescendants = true
+		list.Parent = outer
+
+		-- Important: same corner as outer (helps with “slices”)
+		addCorner(list, CONTROL_CORNER)
+		list.BackgroundColor3 = theme.BtnBg2
+
+		list.ScrollBarThickness = 3
+		list.ScrollBarImageTransparency = 0
+		list.ScrollBarImageColor3 = theme.Stroke
+
+		local pad = Instance.new("UIPadding")
+		pad.PaddingRight = UDim.new(0, list.ScrollBarThickness + 2)
+		pad.Parent = list
+
+		local ll = Instance.new("UIListLayout")
+		ll.SortOrder = Enum.SortOrder.LayoutOrder
+		ll.Padding = UDim.new(0,0)
+		ll.Parent = list
+
+		list.CanvasSize = UDim2.new(0,0,0,#options * ITEM_H)
+		list.ScrollingDirection = Enum.ScrollingDirection.Y
+
+		for i, opt in ipairs(options) do
+			local b = Instance.new("TextButton")
+			b.BorderSizePixel = 0
+			b.Size = UDim2.new(1,0,0,ITEM_H)
+			b.LayoutOrder = i
+			b.ZIndex = 603
+			b.AutoButtonColor = false
+			b.Font = FONT
+			b.TextSize = 11
+			b.Text = tostring(opt)
+			b.Parent = list
+
+			b.BackgroundColor3 = theme.BtnBg2
+			b.TextColor3 = theme.Text
+
+			b.MouseEnter:Connect(function()
+				b.BackgroundColor3 = theme.Active
+			end)
+			b.MouseLeave:Connect(function()
+				b.BackgroundColor3 = theme.BtnBg2
+			end)
+
+			b.MouseButton1Click:Connect(function()
+				self:Close()
+				if onPick then pcall(onPick, opt) end
+			end)
+		end
+
+		local function updatePos()
+			if not btn.Parent or not outer.Parent then self:Close(); return end
+			local nx, ny, _, _ = compute()
+			outer.Position = UDim2.fromOffset(nx, ny)
+		end
+
+		blocker.MouseButton1Click:Connect(function()
+			self:Close()
+		end)
+
+		self.open = { blocker = blocker, menu = outer }
+		self.followConn = RunService.RenderStepped:Connect(updatePos)
+
+		return outer
+	end
+
+	return self
+end
+
+--========================
+-- MakeWindow
+--========================
+function SimpleUILib:MakeWindow(cfg)
+	cfg = cfg or {}
+	local titleText = tostring(cfg.Title or "Title of the library")
+	local startTheme = tostring(cfg.Theme or "Carbon")
+	if not THEMES[startTheme] then startTheme = "Carbon" end
+
+	local binder = ThemeBinder()
+	binder:SetTheme(startTheme)
+
+	local keyMgr = KeybindManager()
+
+	-- Destroy previous same gui (optional safety)
+	pcall(function()
+		local p = getParent()
+		local old = p:FindFirstChild("SimpleUILibGui")
+		if old then old:Destroy() end
+	end)
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "SimpleUILibGui"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.Parent = getParent()
+
+	local shell = Instance.new("Frame")
+	shell.Name = "Shell"
+	shell.Size = UDim2.fromOffset(WINDOW_W, WINDOW_H)
+	shell.Position = UDim2.new(0.5, -WINDOW_W/2, 0.5, -WINDOW_H/2)
+	shell.BorderSizePixel = 0
+	shell.Active = true
+	shell.Parent = gui
+	addCorner(shell, CORNER)
+	binder:Bind(shell, "BackgroundColor3", "MainBg")
+
+	local shellStroke = Instance.new("UIStroke")
+	shellStroke.Thickness = 0.5
+	shellStroke.Transparency = 0.55
+	shellStroke.Parent = shell
+	binder:Bind(shellStroke, "Color", "Stroke")
+
+	local clip = Instance.new("Frame")
+	clip.Name = "Clip"
+	clip.Size = UDim2.new(1,0,1,0)
+	clip.BorderSizePixel = 0
+	clip.ClipsDescendants = true
+	clip.Parent = shell
+	addCorner(clip, CORNER)
+	binder:Bind(clip, "BackgroundColor3", "MainBg")
+
+	local overlayLayer = Instance.new("Frame")
+	overlayLayer.Name = "OverlayLayer"
+	overlayLayer.BackgroundTransparency = 1
+	overlayLayer.BorderSizePixel = 0
+	overlayLayer.Size = UDim2.new(1,0,1,0)
+	overlayLayer.ZIndex = 500
+	overlayLayer.Parent = gui
+
+	local dropdownMgr = DropdownManager(overlayLayer)
+
+	-- Topbar
+	local top = Instance.new("Frame")
+	top.Name = "TopBar"
+	top.Size = UDim2.new(1,0,0,TOP_H)
+	top.BorderSizePixel = 0
+	top.ZIndex = 5
+	top.Parent = clip
+	addCorner(top, CORNER)
+	binder:Bind(top, "BackgroundColor3", "TopBar")
+
+	local title = Instance.new("TextLabel")
+	title.BackgroundTransparency = 1
+	title.Position = UDim2.new(0, 12, 0, 0)
+	title.Size = UDim2.new(1, -100, 1, 0)
+	title.Font = FONT
+	title.TextSize = 13
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.Text = titleText
+	title.ZIndex = 6
+	title.Parent = top
+	binder:Bind(title, "TextColor3", "Text")
+
+	local btnHolder = Instance.new("Frame")
+	btnHolder.BackgroundTransparency = 1
+	btnHolder.Size = UDim2.new(0, 90, 1, 0)
+	btnHolder.Position = UDim2.new(1, -90, 0, 0)
+	btnHolder.ZIndex = 6
+	btnHolder.Parent = top
+
+	local function makeTopBtn(txt, x)
+		local b = Instance.new("TextButton")
+		b.Size = UDim2.fromOffset(24, 24)
+		b.Position = UDim2.new(0, x, 0.5, -12)
+		b.BorderSizePixel = 0
+		b.Font = FONT
+		b.TextSize = 12
+		b.Text = txt
+		b.ZIndex = 7
+		b.Parent = btnHolder
+		addCorner(b, CONTROL_CORNER)
+		binder:Bind(b, "BackgroundColor3", "BtnBg")
+		binder:Bind(b, "TextColor3", "Text")
+		return b
+	end
+
+	local minBtn = makeTopBtn("-", 10)
+	local closeBtn = makeTopBtn("X", 40)
+
+	-- Body
+	local body = Instance.new("Frame")
+	body.BackgroundTransparency = 1
+	body.Position = UDim2.new(0,0,0,TOP_H)
+	body.Size = UDim2.new(1,0,1,-TOP_H)
+	body.Parent = clip
+
+	-- Left panel
+	local left = Instance.new("Frame")
+	left.BorderSizePixel = 0
+	left.Size = UDim2.new(0, LEFT_W, 1, 0)
+	left.Parent = body
+	addCorner(left, CORNER)
+	binder:Bind(left, "BackgroundColor3", "LeftBg")
+
+	-- Right panel (content)
+	local right = Instance.new("Frame")
+	right.BackgroundTransparency = 1
+	right.Position = UDim2.new(0, LEFT_W, 0, 0)
+	right.Size = UDim2.new(1, -LEFT_W, 1, 0)
+	right.Parent = body
+
+	local content = Instance.new("ScrollingFrame")
+	content.Name = "Content"
+	content.BackgroundTransparency = 1
+	content.BorderSizePixel = 0
+	content.Size = UDim2.new(1,0,1,0)
+	content.ScrollBarThickness = 3
+	content.ScrollBarImageTransparency = 0.2
+	content.ZIndex = 15
+	content.Parent = right
+	binder:Bind(content, "ScrollBarImageColor3", "Stroke")
+	enableAutoCanvas(content)
+
+	addPadding(content, 12, 12, 10, 10)
+	makeListLayout(content, GAP)
+
+	-- Sections list (left)
+	local sectionCount = 0
+	local selectedSection = nil
+
+	local sectionList = Instance.new("ScrollingFrame")
+	sectionList.BackgroundTransparency = 1
+	sectionList.BorderSizePixel = 0
+	sectionList.Position = UDim2.new(0,0,0,0)
+	sectionList.Size = UDim2.new(1,0,1,0) -- will be resized when theme panel docks bottom
+	sectionList.ScrollBarThickness = 2
+	sectionList.ScrollBarImageTransparency = 0.5
+	sectionList.ZIndex = 20
+	sectionList.Parent = left
+	binder:Bind(sectionList, "ScrollBarImageColor3", "Stroke")
+	enableAutoCanvas(sectionList)
+
+	addPadding(sectionList, 8, 8, 8, 8)
+	local sectionLL = makeListLayout(sectionList, GAP)
+
+	-- Theme panel (pinned; top if no sections, bottom if sections exist)
+	local THEME_PANEL_H = 64
+
+	local themePanel = Instance.new("Frame")
+	themePanel.Name = "ThemePanel"
+	themePanel.BorderSizePixel = 0
+	themePanel.Size = UDim2.new(1, -16, 0, THEME_PANEL_H)
+	themePanel.Position = UDim2.new(0, 8, 0, 8) -- will be updated
+	themePanel.ZIndex = 30
+	themePanel.Parent = left
+	addCorner(themePanel, CONTROL_CORNER)
+	binder:Bind(themePanel, "BackgroundColor3", "BtnBg")
+
+	local themeTitle = Instance.new("TextLabel")
+	themeTitle.BackgroundTransparency = 1
+	themeTitle.Position = UDim2.new(0, 10, 0, 6)
+	themeTitle.Size = UDim2.new(1, -20, 0, 14)
+	themeTitle.Font = FONT
+	themeTitle.TextSize = 11
+	themeTitle.TextXAlignment = Enum.TextXAlignment.Left
+	themeTitle.Text = "Themes"
+	themeTitle.ZIndex = 31
+	themeTitle.Parent = themePanel
+	binder:Bind(themeTitle, "TextColor3", "DimText")
+
+	local themeBtn = Instance.new("TextButton")
+	themeBtn.BorderSizePixel = 0
+	themeBtn.Position = UDim2.new(0, 10, 0, 26)
+	themeBtn.Size = UDim2.new(1, -20, 0, 26)
+	themeBtn.Font = FONT
+	themeBtn.TextSize = 11
+	themeBtn.TextXAlignment = Enum.TextXAlignment.Left
+	themeBtn.Text = "  " .. binder.name .. "  v"
+	themeBtn.ZIndex = 31
+	themeBtn.Parent = themePanel
+	addCorner(themeBtn, CONTROL_CORNER)
+	binder:Bind(themeBtn, "BackgroundColor3", "BtnBg2")
+	binder:Bind(themeBtn, "TextColor3", "Text")
+
+	local function updateThemeDock()
+		if sectionCount == 0 then
+			themePanel.Position = UDim2.new(0, 8, 0, 8)
+			sectionList.Position = UDim2.new(0,0,0,THEME_PANEL_H + 16)
+			sectionList.Size = UDim2.new(1,0,1,-(THEME_PANEL_H + 16))
+		else
+			themePanel.Position = UDim2.new(0, 8, 1, -(THEME_PANEL_H + 8))
+			sectionList.Position = UDim2.new(0,0,0,0)
+			sectionList.Size = UDim2.new(1,0,1,-(THEME_PANEL_H + 16))
+		end
+	end
+
+	updateThemeDock()
+
+	themeBtn.MouseButton1Click:Connect(function()
+		local options = SimpleUILib:GetThemeNames()
+		local function setArrow(open)
+			themeBtn.Text = "  " .. binder.name .. (open and "  ^" or "  v")
+		end
+		setArrow(true)
+		dropdownMgr:Open(themeBtn, options, binder.name, function(pick)
+			binder:SetTheme(pick)
+			themeBtn.Text = "  " .. binder.name .. "  v"
+		end, binder.current, binder)
+	end)
+
+	-- Window drag
+	do
+		local dragging, dragInput, dragStart, startPos
+		local function updateDrag(input)
+			local delta = input.Position - dragStart
+			shell.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+
+		top.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = true
+				dragStart = input.Position
+				startPos = shell.Position
+				input.Changed:Connect(function()
+					if input.UserInputState == Enum.UserInputState.End then dragging = false end
+				end)
+			end
+		end)
+
+		top.InputChanged:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+				dragInput = input
+			end
+		end)
+
+		UIS.InputChanged:Connect(function(input)
+			if input == dragInput and dragging then updateDrag(input) end
+		end)
+	end
+
+	-- Minimize / restore (simple)
+	local mini = Instance.new("Frame")
+	mini.Visible = false
+	mini.BorderSizePixel = 0
+	mini.Size = UDim2.fromOffset(120, 26)
+	mini.Position = UDim2.new(0.5, -60, 0, 32)
+	mini.ZIndex = 100
+	mini.Parent = gui
+	addCorner(mini, CONTROL_CORNER)
+	binder:Bind(mini, "BackgroundColor3", "TopBar")
+
+	local miniStroke = Instance.new("UIStroke")
+	miniStroke.Thickness = 0.5
+	miniStroke.Transparency = 0.55
+	miniStroke.Parent = mini
+	binder:Bind(miniStroke, "Color", "Stroke")
+
+	local miniBtn = Instance.new("TextButton")
+	miniBtn.BackgroundTransparency = 1
+	miniBtn.Size = UDim2.new(1,0,1,0)
+	miniBtn.Font = FONT
+	miniBtn.TextSize = 12
+	miniBtn.Text = "Open UI"
+	miniBtn.ZIndex = 101
+	miniBtn.Parent = mini
+	binder:Bind(miniBtn, "TextColor3", "Text")
+
+	minBtn.MouseButton1Click:Connect(function()
+		dropdownMgr:Close()
+		shell.Visible = false
+		mini.Visible = true
+	end)
+
+	miniBtn.MouseButton1Click:Connect(function()
+		shell.Visible = true
+		mini.Visible = false
+	end)
+
+	closeBtn.MouseButton1Click:Connect(function()
+		dropdownMgr:Close()
+		gui:Destroy()
+	end)
+
+	--========================
+	-- Section object / element builders
+	--========================
+	local function clearContentFrames()
+		for _, ch in ipairs(content:GetChildren()) do
+			if ch:IsA("Frame") then ch:Destroy() end
+		end
+	end
+
+	local function makeRow(height)
+		local row = Instance.new("Frame")
+		row.BackgroundTransparency = 1
+		row.Size = UDim2.new(1,0,0,height or ITEM_H)
+		row.ZIndex = 16
+		row.Parent = content
+		return row
+	end
+
+	local function makeNameArea(row, text, rightW, keybindText)
+		local area = Instance.new("Frame")
+		area.BackgroundTransparency = 1
+		area.Position = UDim2.new(0, 0, 0, 0)
+		area.Size = UDim2.new(1, -(rightW + 12), 1, 0)
+		area.ZIndex = row.ZIndex + 1
+		area.Parent = row
+
+		local ll = Instance.new("UIListLayout")
+		ll.FillDirection = Enum.FillDirection.Horizontal
+		ll.VerticalAlignment = Enum.VerticalAlignment.Center
+		ll.SortOrder = Enum.SortOrder.LayoutOrder
+		ll.Padding = UDim.new(0, 6)
+		ll.Parent = area
+
+		local lbl = Instance.new("TextLabel")
+		lbl.BackgroundTransparency = 1
+		lbl.AutomaticSize = Enum.AutomaticSize.X
+		lbl.Font = FONT
+		lbl.TextSize = 12
+		lbl.TextXAlignment = Enum.TextXAlignment.Left
+		lbl.Text = tostring(text)
+		lbl.ZIndex = row.ZIndex + 2
+		lbl.Parent = area
+		binder:Bind(lbl, "TextColor3", "Text")
+
+		if keybindText and keybindText ~= "" then
+			local kb = Instance.new("TextLabel")
+			kb.BackgroundTransparency = 1
+			kb.AutomaticSize = Enum.AutomaticSize.X
+			kb.Font = FONT
+			kb.TextSize = 11
+			kb.Text = "[ " .. keybindText .. " ]"
+			kb.TextTransparency = KEYBIND_TEXT_TRANS
+			kb.ZIndex = row.ZIndex + 2
+			kb.Parent = area
+			binder:Bind(kb, "TextColor3", "DimText")
+		end
+
+		return area
+	end
+
+	local function keycodeFromString(s)
+		if not s or s == "" then return nil end
+		if #s == 1 then s = string.upper(s) end
+		return Enum.KeyCode[s] or Enum.KeyCode[string.upper(s)]
+	end
+
+	local function makeButtonEl(spec)
+		local row = makeRow(ITEM_H)
+		local btnW = 86
+		makeNameArea(row, spec.Name or "Button", btnW, spec._KeyLabel)
+
+		local btn = Instance.new("TextButton")
+		btn.BorderSizePixel = 0
+		btn.Size = UDim2.new(0, btnW, 1, 0)
+		btn.Position = UDim2.new(1, -btnW, 0, 0)
+		btn.Font = FONT
+		btn.TextSize = 11
+		btn.Text = "Run"
+		btn.ZIndex = row.ZIndex + 1
+		btn.Parent = row
+		addCorner(btn, CONTROL_CORNER)
+		binder:Bind(btn, "BackgroundColor3", "BtnBg2")
+		binder:Bind(btn, "TextColor3", "Text")
+
+		btn.MouseButton1Click:Connect(function()
+			if type(spec.Callback) == "function" then pcall(spec.Callback) end
+		end)
+
+		return { kind="button", row=row, spec=spec }
+	end
+
+	local function makeToggleEl(spec)
+		local row = makeRow(ITEM_H)
+		local w = 56
+		makeNameArea(row, spec.Name or "Toggle", w, spec._KeyLabel)
+
+		local box = Instance.new("TextButton")
+		box.BorderSizePixel = 0
+		box.Size = UDim2.new(0, w, 1, 0)
+		box.Position = UDim2.new(1, -w, 0, 0)
+		box.Text = ""
+		box.ZIndex = row.ZIndex + 1
+		box.Parent = row
+		addCorner(box, CONTROL_CORNER)
+		binder:Bind(box, "BackgroundColor3", "BtnBg2")
+
+		local knob = Instance.new("Frame")
+		knob.BorderSizePixel = 0
+		knob.Size = UDim2.fromOffset(12, 12)
+		knob.ZIndex = row.ZIndex + 2
+		knob.Parent = box
+		addCorner(knob, CONTROL_CORNER)
+		binder:Bind(knob, "BackgroundColor3", "Text")
+
+		local state = (spec.Default == true)
+
+		local function render(instant)
+			local th = binder.current
+			box.BackgroundColor3 = state and th.Active or th.BtnBg2
+			local xOff = state and (w - 12 - 6) or 6
+			local goal = UDim2.new(0, xOff, 0.5, -6)
+			if instant then
+				knob.Position = goal
+			else
+				TweenService:Create(knob, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position=goal}):Play()
+			end
+		end
+
+		binder:AddRefresher(function() render(true) end)
+		render(true)
+
+		box.MouseButton1Click:Connect(function()
+			state = not state
+			render(false)
+			if type(spec.Callback) == "function" then pcall(spec.Callback, state) end
+		end)
+
+		return { kind="toggle", row=row, spec=spec, get=function() return state end, set=function(v) state=not not v; render(true) end }
+	end
+
+	local function makeSliderEl(spec)
+		local row = makeRow(ITEM_H)
+		local totalW = 190
+		makeNameArea(row, spec.Name or "Slider", totalW, nil)
+
+		local wrap = Instance.new("Frame")
+		wrap.BackgroundTransparency = 1
+		wrap.Size = UDim2.new(0, totalW, 1, 0)
+		wrap.Position = UDim2.new(1, -totalW, 0, 0)
+		wrap.ZIndex = row.ZIndex + 1
+		wrap.Parent = row
+
+		local valueW = 52
+		local barW = totalW - valueW - 6
+
+		local valBox = Instance.new("Frame")
+		valBox.BorderSizePixel = 0
+		valBox.Size = UDim2.new(0, valueW, 1, 0)
+		valBox.Position = UDim2.new(1, -valueW, 0, 0)
+		valBox.ZIndex = row.ZIndex + 2
+		valBox.Parent = wrap
+		addCorner(valBox, CONTROL_CORNER)
+		binder:Bind(valBox, "BackgroundColor3", "BtnBg2")
+
+		local valText = Instance.new("TextLabel")
+		valText.BackgroundTransparency = 1
+		valText.Size = UDim2.new(1,0,1,0)
+		valText.Font = FONT
+		valText.TextSize = 11
+		valText.ZIndex = row.ZIndex + 3
+		valText.Parent = valBox
+		binder:Bind(valText, "TextColor3", "Text")
+
+		local valName = tostring(spec.ValueName or "")
+		if valName ~= "" then
+			valText.Text = tostring(spec.Default or spec.Min or 0) .. " " .. valName
+		end
+
+		local bar = Instance.new("Frame")
+		bar.BorderSizePixel = 0
+		bar.Size = UDim2.new(0, barW, 0, 6)
+		bar.Position = UDim2.new(0, 0, 0.5, -3)
+		bar.ZIndex = row.ZIndex + 2
+		bar.Parent = wrap
+		addCorner(bar, CONTROL_CORNER)
+		binder:Bind(bar, "BackgroundColor3", "BtnBg")
+
+		local fill = Instance.new("Frame")
+		fill.BorderSizePixel = 0
+		fill.Size = UDim2.new(0,0,1,0)
+		fill.ZIndex = row.ZIndex + 3
+		fill.Parent = bar
+		addCorner(fill, CONTROL_CORNER)
+		binder:Bind(fill, "BackgroundColor3", "Active")
+
+		-- Bigger invisible hit zone around knob
+		local HIT = 22
+		local knobHit = Instance.new("TextButton")
+		knobHit.BackgroundTransparency = 1
+		knobHit.BorderSizePixel = 0
+		knobHit.Text = ""
+		knobHit.AutoButtonColor = false
+		knobHit.Size = UDim2.fromOffset(HIT, HIT)
+		knobHit.ZIndex = row.ZIndex + 4
+		knobHit.Parent = bar
+
+		local knob = Instance.new("Frame")
+		knob.BorderSizePixel = 0
+		knob.Size = UDim2.fromOffset(10,10)
+		knob.Position = UDim2.new(0.5,-5,0.5,-5)
+		knob.ZIndex = row.ZIndex + 5
+		knob.Parent = knobHit
+		addCorner(knob, CONTROL_CORNER)
+		binder:Bind(knob, "BackgroundColor3", "Text")
+
+		local minV = tonumber(spec.Min) or 0
+		local maxV = tonumber(spec.Max) or 100
+		local inc = tonumber(spec.Increment) or 1
+		local value = tonumber(spec.Default) or minV
+
+		local dragging = false
+		local dragConn = nil
+
+		local function setValue(v, call)
+			v = clamp(v, minV, maxV)
+			v = clamp(roundStep(v, inc), minV, maxV)
+			value = v
+
+			local ratio = (value - minV) / (maxV - minV)
+			ratio = clamp(ratio, 0, 1)
+
+			fill.Size = UDim2.new(ratio, 0, 1, 0)
+			knobHit.Position = UDim2.new(ratio, -HIT/2, 0.5, -HIT/2)
+
+			if valName ~= "" then
+				valText.Text = tostring(value) .. " " .. valName
+			else
+				valText.Text = tostring(value)
+			end
+
+			if call and type(spec.Callback) == "function" then
+				pcall(spec.Callback, value)
+			end
+		end
+
+		local function setFromX(screenX)
+			local absX = bar.AbsolutePosition.X
+			local w = bar.AbsoluteSize.X
+			if w <= 1 then return end
+			local ratio = (screenX - absX) / w
+			ratio = clamp(ratio, 0, 1)
+			local v = minV + ratio * (maxV - minV)
+			setValue(v, true)
+		end
+
+		local function stopDrag()
+			dragging = false
+			if dragConn then dragConn:Disconnect(); dragConn=nil end
+		end
+
+		UIS.InputEnded:Connect(function(input)
+			if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+				stopDrag()
+			end
+		end)
+
+		local function startDrag(input)
+			dragging = true
+			if input.UserInputType == Enum.UserInputType.Touch then
+				setFromX(input.Position.X)
+			else
+				dragConn = RunService.RenderStepped:Connect(function()
+					setFromX(UIS:GetMouseLocation().X)
+				end)
+				setFromX(UIS:GetMouseLocation().X)
+			end
+		end
+
+		bar.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				startDrag(input)
+			end
+		end)
+		knobHit.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				startDrag(input)
+			end
+		end)
+
+		setValue(value, false)
+		return { kind="slider", row=row, spec=spec, get=function() return value end, set=function(v) setValue(v,false) end }
+	end
+
+	local function makeTextboxEl(spec)
+		local row = makeRow(ITEM_H)
+		local w = 190
+		makeNameArea(row, spec.Name or "Textbox", w, nil)
+
+		local box = Instance.new("Frame")
+		box.BorderSizePixel = 0
+		box.Size = UDim2.new(0, w, 1, 0)
+		box.Position = UDim2.new(1, -w, 0, 0)
+		box.ZIndex = row.ZIndex + 1
+		box.Parent = row
+		addCorner(box, CONTROL_CORNER)
+		binder:Bind(box, "BackgroundColor3", "BtnBg2")
+
+		local tb = Instance.new("TextBox")
+		tb.BackgroundTransparency = 1
+		tb.BorderSizePixel = 0
+		tb.Position = UDim2.new(0, 8, 0, 0)
+		tb.Size = UDim2.new(1, -16, 1, 0)
+		tb.Font = FONT
+		tb.TextSize = 11
+		tb.TextXAlignment = Enum.TextXAlignment.Left
+		tb.ClearTextOnFocus = (spec.ClearTextOnFocus == true)
+		tb.PlaceholderText = tostring(spec.Placeholder or "Type...")
+		tb.Text = tostring(spec.Default or "")
+		tb.ZIndex = row.ZIndex + 2
+		tb.Parent = box
+		binder:Bind(tb, "TextColor3", "Text")
+		binder:Bind(tb, "PlaceholderColor3", "DimText")
+
+		tb.FocusLost:Connect(function(enterPressed)
+			if type(spec.Callback) == "function" then
+				pcall(spec.Callback, tb.Text, enterPressed)
+			end
+		end)
+
+		return { kind="textbox", row=row, spec=spec, get=function() return tb.Text end, set=function(v) tb.Text=tostring(v or "") end }
+	end
+
+	local function makeLabelEl(spec)
+		local text = tostring(spec.Text or "")
+		local row = makeRow(ITEM_H) -- will resize
+		row.Name = "LabelRow"
+
+		local lbl = Instance.new("TextLabel")
+		lbl.BackgroundTransparency = 1
+		lbl.Size = UDim2.new(1,0,1,0)
+		lbl.Font = FONT
+		lbl.TextSize = 12
+		lbl.TextXAlignment = Enum.TextXAlignment.Left
+		lbl.TextYAlignment = Enum.TextYAlignment.Top
+		lbl.TextWrapped = true
+		lbl.Text = text
+		lbl.ZIndex = row.ZIndex + 1
+		lbl.Parent = row
+
+		lbl.TextTransparency = tonumber(spec.Transparency) or 0.15
+
+		-- color override or theme DimText
+		if spec.Color then
+			lbl.TextColor3 = spec.Color
+		else
+			binder:Bind(lbl, "TextColor3", "DimText")
+		end
+
+		-- auto height based on text
+		task.defer(function()
+			local w = lbl.AbsoluteSize.X
+			if w <= 10 then w = 300 end
+			local size = TextService:GetTextSize(text, 12, FONT, Vector2.new(w, 1000))
+			local linesH = math.max(ITEM_H, size.Y + 2)
+			row.Size = UDim2.new(1,0,0,linesH)
+		end)
+
+		return { kind="label", row=row, spec=spec }
+	end
+
+	local function makeHeadTextEl(spec)
+		local text = tostring(spec.Text or "-----")
+		local row = makeRow(ITEM_H)
+
+		local lbl = Instance.new("TextLabel")
+		lbl.BackgroundTransparency = 1
+		lbl.Font = FONT
+		lbl.TextSize = 12
+		lbl.TextXAlignment = Enum.TextXAlignment.Center
+		lbl.Text = text
+		lbl.ZIndex = row.ZIndex + 1
+		lbl.Parent = row
+		lbl.TextTransparency = tonumber(spec.Transparency) or 0.0
+
+		if spec.Color then
+			lbl.TextColor3 = spec.Color
+		else
+			binder:Bind(lbl, "TextColor3", "Text")
+		end
+
+		local lineL = Instance.new("Frame")
+		lineL.BorderSizePixel = 0
+		lineL.BackgroundTransparency = 0.7
+		lineL.ZIndex = row.ZIndex + 1
+		lineL.Parent = row
+		binder:Bind(lineL, "BackgroundColor3", "Stroke")
+
+		local lineR = Instance.new("Frame")
+		lineR.BorderSizePixel = 0
+		lineR.BackgroundTransparency = 0.7
+		lineR.ZIndex = row.ZIndex + 1
+		lineR.Parent = row
+		binder:Bind(lineR, "BackgroundColor3", "Stroke")
+
+		task.defer(function()
+			local rowW = row.AbsoluteSize.X
+			local tSize = TextService:GetTextSize(text, 12, FONT, Vector2.new(1000, ITEM_H))
+			local labelW = clamp(math.floor(tSize.X + 18), 60, math.floor(rowW * 0.75))
+
+			lbl.Size = UDim2.new(0, labelW, 1, 0)
+			lbl.Position = UDim2.new(0.5, -labelW/2, 0, 0)
+
+			local gap = 8
+			local sideW = math.max(0, math.floor(rowW/2 - labelW/2 - gap))
+
+			lineL.Size = UDim2.new(0, sideW, 0, 1)
+			lineL.Position = UDim2.new(0, 0, 0.5, 0)
+
+			lineR.Size = UDim2.new(0, sideW, 0, 1)
+			lineR.Position = UDim2.new(1, -sideW, 0.5, 0)
+		end)
+
+		return { kind="headtext", row=row, spec=spec }
+	end
+
+	local function makeDropdownEl(spec)
+		local row = makeRow(ITEM_H)
+		local w = 190
+		local options = spec.Options or {}
+		if type(options) ~= "table" then options = {} end
+
+		local selected = spec.Default
+		if selected == nil and #options > 0 then selected = options[1] end
+		if selected == nil then selected = "" end
+
+		makeNameArea(row, spec.Name or "DropDown", w, nil)
+
+		local btn = Instance.new("TextButton")
+		btn.BorderSizePixel = 0
+		btn.Size = UDim2.new(0, w, 1, 0)
+		btn.Position = UDim2.new(1, -w, 0, 0)
+		btn.Font = FONT
+		btn.TextSize = 11
+		btn.TextXAlignment = Enum.TextXAlignment.Left
+		btn.Text = "  " .. tostring(selected) .. "  v"
+		btn.ZIndex = row.ZIndex + 1
+		btn.Parent = row
+		addCorner(btn, CONTROL_CORNER)
+		binder:Bind(btn, "BackgroundColor3", "BtnBg2")
+		binder:Bind(btn, "TextColor3", "Text")
+
+		local function setArrow(open)
+			btn.Text = "  " .. tostring(selected) .. (open and "  ^" or "  v")
+		end
+
+		btn.MouseButton1Click:Connect(function()
+			setArrow(true)
+			dropdownMgr:Open(btn, options, selected, function(pick)
+				selected = pick
+				setArrow(false)
+				if type(spec.Callback) == "function" then
+					pcall(spec.Callback, selected)
+				end
+			end, binder.current, binder)
+		end)
+
+		return { kind="dropdown", row=row, spec=spec, get=function() return selected end, set=function(v) selected=v; setArrow(false) end }
+	end
+
+	--========================
+	-- Window API object
+	--========================
+	local Window = {}
+	Window._binder = binder
+	Window._gui = gui
+	Window._content = content
+	Window._sectionList = sectionList
+	Window._dropdownMgr = dropdownMgr
+	Window._keyMgr = keyMgr
+	Window._sections = {}
+	Window._sectionButtons = {}
+	Window._currentSection = nil
+
+	function Window:SetTheme(name)
+		binder:SetTheme(name)
+		themeBtn.Text = "  " .. binder.name .. "  v"
+	end
+
+	local function refreshSectionButtons()
+		for _, b in ipairs(Window._sectionButtons) do
+			if b and b.Parent then
+				local active = (Window._currentSection and Window._currentSection._button == b)
+				b.BackgroundColor3 = active and binder.current.Active or binder.current.BtnBg
+			end
+		end
+	end
+	binder:AddRefresher(refreshSectionButtons)
+
+	local function showSection(section)
+		dropdownMgr:Close()
+		clearContentFrames()
+		Window._currentSection = section
+		refreshSectionButtons()
+
+		-- Render elements in order
+		for _, el in ipairs(section._elements) do
+			el._render()
+		end
+	end
+
+	function Window:AddSection(cfg2)
+		cfg2 = cfg2 or {}
+		local name = tostring(cfg2.Name or "Section")
+		sectionCount += 1
+		updateThemeDock()
+
+		local btn = Instance.new("TextButton")
+		btn.BorderSizePixel = 0
+		btn.Size = UDim2.new(1,0,0,ITEM_H)
+		btn.Font = FONT
+		btn.TextSize = 12
+		btn.TextXAlignment = Enum.TextXAlignment.Left
+		btn.Text = "  " .. name
+		btn.ZIndex = 21
+		btn.Parent = sectionList
+		addCorner(btn, CONTROL_CORNER)
+		btn.BackgroundColor3 = binder.current.BtnBg
+		btn.TextColor3 = binder.current.Text
+
+		-- bind theme colors
+		binder:Bind(btn, "TextColor3", "Text")
+		binder:AddRefresher(function()
+			btn.BackgroundColor3 = binder.current.BtnBg
+		end)
+
+		local Section = {}
+		Section._name = name
+		Section._elements = {}
+		Section._button = btn
+		Section._lastBindable = nil -- last element that can receive AddKeyBind (button/toggle)
+
+		local function addElement(renderer, bindableObj)
+			table.insert(Section._elements, { _render = renderer })
+			if bindableObj then
+				Section._lastBindable = bindableObj
+			end
+			if Window._currentSection == Section then
+				-- live update while visible
+				renderer()
+			end
+		end
+
+		btn.MouseButton1Click:Connect(function()
+			showSection(Section)
+		end)
+
+		--==== Section element API ====
+
+		function Section:AddButton(spec)
+			spec = spec or {}
+			local element = nil
+			local bindable = { key="", callback=nil, setKeyLabel=nil }
+			bindable.callback = function()
+				if type(spec.Callback) == "function" then pcall(spec.Callback) end
+			end
+			addElement(function()
+				element = makeButtonEl(spec)
+			end, bindable)
+			return element
+		end
+
+		function Section:AddToggle(spec)
+			spec = spec or {}
+			local element = nil
+			local bindable = { key="", callback=nil, setKeyLabel=nil }
+			bindable.callback = function()
+				-- on keybind: mimic click (toggle)
+				-- we can just flip by calling set/get if created
+				if element and element.kind == "toggle" then
+					element.set(not element.get())
+					if type(spec.Callback) == "function" then pcall(spec.Callback, element.get()) end
+				end
+			end
+			addElement(function()
+				element = makeToggleEl(spec)
+			end, bindable)
+			return element
+		end
+
+		function Section:AddSlider(spec)
+			spec = spec or {}
+			local element = nil
+			addElement(function()
+				element = makeSliderEl(spec)
+			end, nil)
+			return element
+		end
+
+		function Section:AddTextbox(spec)
+			spec = spec or {}
+			local element = nil
+			addElement(function()
+				element = makeTextboxEl(spec)
+			end, nil)
+			return element
+		end
+
+		function Section:AddLabel(spec)
+			spec = spec or {}
+			local element = nil
+			addElement(function()
+				element = makeLabelEl(spec)
+			end, nil)
+			return element
+		end
+
+		function Section:AddHeadText(spec)
+			spec = spec or {}
+			local element = nil
+			addElement(function()
+				element = makeHeadTextEl(spec)
+			end, nil)
+			return element
+		end
+
+		function Section:AddDropDown(spec)
+			spec = spec or {}
+			local element = nil
+			addElement(function()
+				element = makeDropdownEl(spec)
+			end, nil)
+			return element
+		end
+
+		-- KeyBind attaches to last bindable (Button/Toggle)
+		function Section:AddKeyBind(spec)
+			spec = spec or {}
+			local key = tostring(spec.Default or "")
+			if key == "" then
+				-- if empty, do nothing (as requested)
+				return nil
+			end
+
+			local target = Section._lastBindable
+			if not target then
+				return nil
+			end
+
+			local kc = keycodeFromString(key)
+			if not kc then
+				return nil
+			end
+
+			-- show label near the element name:
+			-- we can't retro-edit already rendered row reliably without tracking label objects,
+			-- so we store label into spec and rerender current section (cheap + clean).
+			if Window._currentSection == Section then
+				-- we rerender section to display key label
+				-- mark last element's spec with _KeyLabel
+				-- For simplicity: we attach to last element already added; in this minimal lib,
+				-- we assume AddKeyBind is called right after button/toggle add.
+				local lastEl = Section._elements[#Section._elements]
+				if lastEl and lastEl._render then
+					-- hack: set in "spec" of last added control if exists
+					-- We can't access that spec here unless we store it: do it via upvalue capture.
+					-- So instead: store key on target and rerender by rebuilding the section (works).
+				end
+			end
+
+			-- bind press to callback (either user callback or bindable.callback)
+			local cb = nil
+			if type(spec.Callback) == "function" then
+				cb = spec.Callback
+			else
+				cb = target.callback
+			end
+
+			keyMgr:Bind(key, cb)
+
+			-- Best practical: show [ KEY ] by forcing next re-render with _KeyLabel.
+			-- We'll set _KeyLabel onto the last element's spec by storing it on Section:
+			-- create a flag and rebuild when section is shown.
+			target._keyLabel = (#key == 1) and string.upper(key) or key
+
+			-- To actually display it, we rebuild the section renderers for the last control:
+			-- easiest: re-show the section if it's current.
+			if Window._currentSection == Section then
+				-- Re-render all with key label applied only to last bindable element.
+				dropdownMgr:Close()
+				clearContentFrames()
+				refreshSectionButtons()
+
+				-- Re-render: when making button/toggle we pass spec._KeyLabel if exists on target
+				-- We'll do it by patching a small global for current pass.
+				local bindableIndex = 0
+				for _, el in ipairs(Section._elements) do
+					-- wrap original renderer by reconstructing for button/toggle only is hard,
+					-- so we store "kind" by inspecting closures? not possible.
+					-- Therefore: we rebuild section by calling stored _render which uses the original spec.
+					-- But original spec doesn't know the key label.
+					-- So we solve this: we attach key label to spec in AddKeyBind by also attaching to Section:
+					-- Since we can't reach spec of last element directly, we keep a pointer on Section.
+				end
+				-- We'll do the correct solution below: store spec pointer on bindable object when created.
+			end
+
+			return true
+		end
+
+		-- Fix: store spec pointer for bindables so AddKeyBind can set _KeyLabel properly.
+		-- We patch bindable storage by overriding AddButton/AddToggle with spec reference.
+		do
+			local oldAddButton = Section.AddButton
+			Section.AddButton = function(self, spec)
+				spec = spec or {}
+				local element = nil
+				local bindable = { key="", callback=nil, specRef=spec }
+				bindable.callback = function()
+					if type(spec.Callback) == "function" then pcall(spec.Callback) end
+				end
+
+				addElement(function()
+					-- inject key label if present
+					spec._KeyLabel = bindable._keyLabel
+					element = makeButtonEl(spec)
+				end, bindable)
+
+				return element
+			end
+
+			local oldAddToggle = Section.AddToggle
+			Section.AddToggle = function(self, spec)
+				spec = spec or {}
+				local element = nil
+				local bindable = { key="", callback=nil, specRef=spec }
+				bindable.callback = function()
+					if element and element.kind == "toggle" then
+						element.set(not element.get())
+						if type(spec.Callback) == "function" then pcall(spec.Callback, element.get()) end
+					end
+				end
+
+				addElement(function()
+					spec._KeyLabel = bindable._keyLabel
+					element = makeToggleEl(spec)
+				end, bindable)
+
+				return element
+			end
+
+			-- re-define AddKeyBind properly now that bindable has specRef
+			Section.AddKeyBind = function(self, spec)
+				spec = spec or {}
+				local key = tostring(spec.Default or "")
+				if key == "" then return nil end
+
+				local target = Section._lastBindable
+				if not target or not target.specRef then return nil end
+
+				local kc = keycodeFromString(key)
+				if not kc then return nil end
+
+				target._keyLabel = (#key == 1) and string.upper(key) or key
+				target.specRef._KeyLabel = target._keyLabel
+
+				local cb = (type(spec.Callback) == "function") and spec.Callback or target.callback
+				keyMgr:Bind(key, cb)
+
+				-- If section currently open, rerender to show label
+				if Window._currentSection == Section then
+					showSection(Section)
+				end
+
+				return true
+			end
+		end
+
+		table.insert(Window._sections, Section)
+		table.insert(Window._sectionButtons, btn)
+
+		-- Auto-open first section
+		if not selectedSection then
+			selectedSection = Section
+			showSection(Section)
+		end
+
+		return Section
+	end
+
+	-- expose a clean theme API
+	function Window:GetTheme()
+		return binder.name
+	end
+
+	function Window:Destroy()
+		dropdownMgr:Close()
+		gui:Destroy()
+	end
+
+	return Window
+end
+
+return SimpleUILib
